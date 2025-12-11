@@ -1,7 +1,11 @@
-import moongose from 'mongoose';
+import mongoose from 'mongoose';
 
 export const dbConfig = async (URI) =>{
-    moongose.connect(URI).
-    then(console.log("DB Connected")).
-    catch(err => console.log(err))
+    try{
+        console.log("DB Connected")
+        await mongoose.connect(URI)
+    }
+    catch(err){
+        console.log(err)
+    }
 }
