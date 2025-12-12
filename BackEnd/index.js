@@ -21,8 +21,18 @@ const {
 const backLog = () => console.log(`Servidor escuchando en http://${HOST}:${PORT}, con MongoDB en ${DB_URI}`);
 
 const app = express()
+
+app.use(express.json()) //Dependencia para que maneje json
 app.use(morgan("dev")) //Dependencia que maneja logs
+app.use(cors()) // Dependencia para poder conectar con Front sin bloqueos
 
 dbConect(DB_URI); //Conexion a base de datos
+
+//Direccionamiento a EndPoints
+
+app.use("/api/ventas", ventasRoutes);
+app.use("/api/clientes", clientesRoutes);
+app.use("/api/llenado", llenadoRoutes);
+app.use("/api/gastos", gastosRoutes);
 
 app.listen(PORT, HOST, backLog) //Levantamos el servidor
