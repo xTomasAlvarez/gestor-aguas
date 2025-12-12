@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const dbConfig = async (URI) =>{
+export const dbConect = async (URI) =>{
     try{
         console.log("DB Connected")
         await mongoose.connect(URI)

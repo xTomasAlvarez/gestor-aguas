@@ -5,7 +5,7 @@ import cors from "cors";
 import express from "express";
 import morgan from "morgan";
 //Importaciones
-import { dbConfig } from "../BackEnd/src/config/dbConfig.js";
+import { dbConect } from "../BackEnd/src/config/dbConfig.js";
 
 //Permite cargar las variables del .envv
 configDotenv()
@@ -23,6 +23,6 @@ const backLog = () => console.log(`Servidor escuchando en http://${HOST}:${PORT}
 const app = express()
 app.use(morgan("dev")) //Dependencia que maneja logs
 
-dbConfig(DB_URI); //Conexion a base de datos
+dbConect(DB_URI); //Conexion a base de datos
 
 app.listen(PORT, HOST, backLog) //Levantamos el servidor

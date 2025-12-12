@@ -1,15 +1,10 @@
-import mongoose, { Model, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const VentaSchema = new Schema({
-    cliente:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref:"Cliente",
-        required: true
-    },
+const LlenadoSchema = new Schema({
     fecha:{
         type:Date,
-        required:true,
-        default: Date.now
+        default:Date.now,
+        required:true
     },
     items: [
         {
@@ -26,21 +21,16 @@ const VentaSchema = new Schema({
             precio_unitario: {
                 type: Number,
                 required: true
-            }, // Precio congelado al momento de la venta
+            },
             subtotal: Number
         }
     ],
     total:{
         type: Number,
         required: true
-    },
-    metodo_pago: {
-        type: String,
-        enum: ['efectivo', 'fiado', 'transferencia'], // Lista cerrada de opciones
-        default: 'efectivo'
     }
 }, {
     timestamps: true
 });
 
-export default mongoose.model("Venta",VentaSchema);
+export default mongoose.model("Llenado", LlenadoSchema)

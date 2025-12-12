@@ -2,7 +2,7 @@ import { Model, Schema } from "mongoose";
 
 import mongoose from 'mongoose';
 
-const ClienteSchema = new mongoose.Schema({
+const ClienteSchema = new Schema({
     nombre: {
         type: String,
         required: true,
