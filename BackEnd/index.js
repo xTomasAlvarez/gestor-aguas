@@ -31,8 +31,8 @@ dbConect(DB_URI); //Conexion a base de datos
 //Direccionamiento a EndPoints
 
 app.use("/api/ventas", ventasRoutes);
-app.use("/api/clientes", clientesRoutes);
-app.use("/api/llenado", llenadoRoutes);
-app.use("/api/gastos", gastosRoutes);
+// app.use("/api/clientes", clientesRoutes);
+// app.use("/api/llenado", llenadoRoutes);
+// app.use("/api/gastos", gastosRoutes);
 
 app.listen(PORT, HOST, backLog) //Levantamos el servidor
