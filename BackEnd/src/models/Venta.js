@@ -42,5 +42,5 @@ const VentaSchema = new Schema({
 }, {
     timestamps: true
 });
-
+// Hay combos con dispenser y bidones, son mensualizados donde el precio de los bidones no se ajusta directamente al unitario
 export default mongoose.model("Venta",VentaSchema);

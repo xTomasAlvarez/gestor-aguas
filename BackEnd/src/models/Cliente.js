@@ -13,6 +13,10 @@ const ClienteSchema = new Schema({
         type: String,
         required: false
     },
+    localidad: {
+        type: String,
+        required: true
+    },
     telefono: {
         type: String,
         required: false,

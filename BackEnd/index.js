@@ -5,7 +5,12 @@ import cors from "cors";
 import express from "express";
 import morgan from "morgan";
 //Importaciones
-import { dbConect } from "../BackEnd/src/config/dbConfig.js";
+import { dbConect } from "../BackEnd/src/config/dbConect.js";
+import ventasRoutes from "../BackEnd/src/routes/ventasRoutes.js"
+import clientesRoutes from "../BackEnd/src/routes/clientesRoutes.js"
+import gastosRoutes from "../BackEnd/src/routes/gastosRoutes.js"
+import llenadoRoutes from "../BackEnd/src/routes/llenadoRoutes.js"
+
 
 //Permite cargar las variables del .envv
 configDotenv()

@@ -34,35 +34,34 @@ export const crearVenta = async (req, res) => {
         // HTTP 201: Created (Recurso creado exitosamente)
         res.status(201).json(nuevaVenta);
 
-    } catch (error) {
-        console.error("❌ Error en crearVenta:", error);
-        res.status(500).json({ message: "Error interno al procesar la venta", error: error.message });
+    } catch (err) {
+        console.err("❌ err en crearVenta:", err);
+        res.status(500).json({ message: "err interno al procesar la venta", err: err.message });
     }
 };
 
 // GET: Obtener historial de ventas con filtros
+import Venta from "../models/Venta.js";
+
 export const obtenerVentas = async (req, res) => {
     try {
         const { fecha, metodo_pago, cliente } = req.query;
         const filter = {};
 
-        // Construcción dinámica del filtro según lo que llegue en la URL
-        if (metodo_pago) filter.metodo_pago = metodo_pago;
-        if (cliente) filter.cliente = cliente;
-        if (fecha) filter.fecha = fecha; // TODO: Mejorar a futuro para rangos de fecha
+        // Filtros dinámicos con ternarios
+        metodo_pago ? filter.metodo_pago = metodo_pago : null;
+        cliente ? filter.cliente = cliente : null; // Aquí 'cliente' se espera que sea el ID
+        fecha ? filter.fecha = fecha : null;
 
-        // Populate: Trae el nombre del cliente en lugar de solo su ID
-        // Sort: -1 ordena descendente (lo más nuevo primero)
         const ventas = await Venta.find(filter)
             .populate({ path: "cliente", select: "nombre" })
             .sort({ createdAt: -1 });
 
-        // HTTP 200: OK
         res.status(200).json(ventas);
 
-    } catch (error) {
-        console.error("❌ Error en obtenerVentas:", error);
-        res.status(500).json({ message: "Error al obtener ventas", error: error.message });
+    } catch (err) {
+        console.error("❌ Error en obtenerVentas:", err);
+        res.status(500).json({ message: "Error al obtener ventas", error: err.message });
     }
 };
 
@@ -79,9 +78,9 @@ export const obtenerVentaById = async (req, res) => {
 
         res.status(200).json(venta);
 
-    } catch (error) {
-        console.error("❌ Error en obtenerVentaById:", error);
-        res.status(500).json({ message: "Error al obtener la venta", error: error.message });
+    } catch (err) {
+        console.err("❌ err en obtenerVentaById:", err);
+        res.status(500).json({ message: "err al obtener la venta", err: err.message });
     }
 };
 
@@ -116,13 +115,13 @@ export const eliminarVenta = async (req, res) => {
 
         res.status(200).json({ message: "Venta eliminada y saldos ajustados correctamente" });
 
-    } catch (error) {
-        console.error("❌ Error en eliminarVenta:", error);
-        res.status(500).json({ message: "Error crítico al eliminar venta", error: error.message });
+    } catch (err) {
+        console.err("❌ err en eliminarVenta:", err);
+        res.status(500).json({ message: "err crítico al eliminar venta", err: err.message });
     }
 };
 
-// PUT: Modificar venta (Complejo: Revertir anterior -> Aplicar nueva)
+// PUT: Modificar venta 
 export const modificarVenta = async (req, res) => {
     const { id } = req.params;
     const { items, total, metodo_pago, cliente } = req.body; 
@@ -176,8 +175,8 @@ export const modificarVenta = async (req, res) => {
 
         res.status(200).json(ventaActualizada);
 
-    } catch (error) {
-        console.error("❌ Error en modificarVenta:", error);
-        res.status(500).json({ message: "Error al modificar la venta", error: error.message });
+    } catch (err) {
+        console.err("❌ err en modificarVenta:", err);
+        res.status(500).json({ message: "err al modificar la venta", err: err.message });
     }
 };

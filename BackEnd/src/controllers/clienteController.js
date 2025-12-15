@@ -2,7 +2,7 @@ import Cliente from "../models/Cliente.js";
 
 export const crearCliente = async (req, res) => {
     try {
-        const { nombre, direccion, telefono } = req.body;
+        const { nombre, direccion, telefono, localidad } = req.body;
 
         // --- VALIDACIÓN 1: TELÉFONO REPETIDO ---
         // Solo verificamos si el campo telefono tiene contenido
@@ -36,8 +36,34 @@ export const crearCliente = async (req, res) => {
             cliente: nuevoCliente
         });
 
-    } catch (error) {
-        console.error("❌ Error en crearCliente:", error);
+    } catch (err) {
+        console.error("❌ Error en crearCliente:", err);
         res.status(500).json({ message: "Hubo un error en la creación del cliente" });
     }
+}
+
+export const obtenerClientes = async (req, res) => {
+    try {
+        const { nombre, direccion, localidad, activo } = req.query;
+
+        // Construcción dinámica con ternarios
+        nombre ? filter.nombre = { $regex: nombre, $options: "i" } : null;
+        direccion ? filter.direccion = { $regex: direccion, $options: "i" } : null;
+        localidad ? filter.localidad = { $regex: localidad, $options: "i" } : null;
+        filter.activo = true === "false" ? false : true;
+
+        const clientes = await Cliente
+            .find(filter)
+            .sort({ nombre: 1 });
+
+        res.status(200).json(clientes);
+
+    } catch (err) {
+        console.error("❌ Error en obtenerClientes:", err);
+        res.status(500).json({ message: "Error al obtener clientes", error: err.message });
+    }
+};
+
+export const obtenerClienteById = (req, res) =>{
+    
 }
