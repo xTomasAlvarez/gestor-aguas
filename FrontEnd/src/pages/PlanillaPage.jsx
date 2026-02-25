@@ -193,12 +193,14 @@ const TablaLlenados = ({ llenados }) => {
 
 // ── SECCIÓN 2 Derecha: Arqueo de caja ────────────────────────────────────
 const ArqueoCaja = ({ ventas, gastos }) => {
-    const ingresosEfectivo    = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + v.total, 0);
-    const ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + v.total, 0);
-    const totalFiado          = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + v.total, 0);
-    const totalIngresos       = ingresosEfectivo + ingresosTransferencia;
+    // Ingresos reales = suma de monto_pagado de todas las ventas
+    const totalCobrado        = ventas.reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const ingresosEfectivo    = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const cobradoFiado        = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + (v.monto_pagado ?? 0), 0);
+    const pendienteFiado      = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? 0)), 0);
     const totalEgresos        = gastos.reduce((acc, g) => acc + g.monto, 0);
-    const cajaFinal           = totalIngresos - totalEgresos;
+    const cajaFinal           = totalCobrado - totalEgresos;
 
     const Fila = ({ label, valor, colorVal = "text-slate-800", small = false }) => (
         <div className={`flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0 ${small ? "opacity-80" : ""}`}>
@@ -213,7 +215,7 @@ const ArqueoCaja = ({ ventas, gastos }) => {
 
             {/* Ingresos */}
             <div className="mb-5">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Ingresos</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Ingresos cobrados</p>
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300">Efectivo</p>
                     <p className="text-sm font-bold text-emerald-400">{formatPeso(ingresosEfectivo)}</p>
@@ -223,11 +225,15 @@ const ArqueoCaja = ({ ventas, gastos }) => {
                     <p className="text-sm font-bold text-blue-400">{formatPeso(ingresosTransferencia)}</p>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
+                    <p className="text-sm text-slate-300">Fiado (cobrado parcial)</p>
+                    <p className="text-sm font-bold text-amber-400">{formatPeso(cobradoFiado)}</p>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300 flex items-center gap-2">
-                        Fiado
+                        Pendiente fiado
                         <span className="text-xs bg-red-900 text-red-300 px-1.5 py-0.5 rounded">no cobrado</span>
                     </p>
-                    <p className="text-sm font-bold text-red-400">{formatPeso(totalFiado)}</p>
+                    <p className="text-sm font-bold text-red-400">{formatPeso(pendienteFiado)}</p>
                 </div>
             </div>
 
@@ -251,7 +257,7 @@ const ArqueoCaja = ({ ventas, gastos }) => {
                         <p className={`text-3xl font-extrabold leading-none ${cajaFinal >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                             {formatPeso(cajaFinal)}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Efectivo + Transf. - Gastos</p>
+                        <p className="text-xs text-slate-500 mt-1">Total cobrado - Gastos</p>
                     </div>
                 </div>
             </div>

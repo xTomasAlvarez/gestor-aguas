@@ -8,8 +8,9 @@ const deudaSchema = new Schema(
         bidones_20L: { type: Number, default: 0 },
         bidones_12L: { type: Number, default: 0 },
         sodas:       { type: Number, default: 0 },
+        saldo:       { type: Number, default: 0 }, // Deuda monetaria ($)
     },
-    { _id: false } // No necesita _id propio al ser un subdocumento
+    { _id: false }
 );
 
 // ── Schema principal: Cliente ──────────────────────────────────────────────

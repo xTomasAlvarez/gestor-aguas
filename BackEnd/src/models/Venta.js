@@ -61,6 +61,11 @@ const ventaSchema = new Schema(
             enum:    ["efectivo", "fiado", "transferencia"],
             default: "efectivo",
         },
+        monto_pagado: {
+            type:    Number,
+            default: 0,
+            min:     [0, "El monto pagado no puede ser negativo."],
+        },
     },
     {
         timestamps: true,
