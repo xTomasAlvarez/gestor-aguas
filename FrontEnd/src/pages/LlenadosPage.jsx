@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { obtenerLlenados, crearLlenado, actualizarLlenado, eliminarLlenado } from "../services/llenadoService";
+import useListaCrud from "../hooks/useListaCrud";
+import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
-
-const inputCls     = "w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white";
-const btnPrimary   = "px-5 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors";
-const btnSecondary = "px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-700 border border-slate-200 rounded-xl hover:border-blue-400 transition-colors";
+import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 const PRODUCTOS = [
     { key: "Bidon 20L", label: "Bidon 20L" },
@@ -14,20 +13,18 @@ const PRODUCTOS = [
 ];
 const CANT_VACIO = { "Bidon 20L": 0, "Bidon 12L": 0, "Soda": 0 };
 
-const llenadoToForm = (llenado) => {
+// Conversores form ↔ modelo
+const llenadoToForm = (l) => {
     const cantidades = { ...CANT_VACIO };
-    llenado.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
-    return { cantidades, costo_total: llenado.costo_total ?? "" };
+    l.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
+    return { cantidades, costo_total: l.costo_total ?? "" };
 };
-const formToPayload = (form) => {
-    const productos = PRODUCTOS
-        .filter(({ key }) => Number(form.cantidades[key]) > 0)
-        .map(({ key }) => ({ producto: key, cantidad: Number(form.cantidades[key]) }));
-    return {
-        productos,
-        ...(form.costo_total !== "" && { costo_total: Number(form.costo_total) }),
-    };
-};
+const formToPayload = ({ cantidades, costo_total }) => ({
+    productos: PRODUCTOS
+        .filter(({ key }) => Number(cantidades[key]) > 0)
+        .map(({ key }) => ({ producto: key, cantidad: Number(cantidades[key]) })),
+    ...(costo_total !== "" && { costo_total: Number(costo_total) }),
+});
 
 // ── Formulario ────────────────────────────────────────────────────────────
 const FORM_VACIO = { cantidades: { ...CANT_VACIO }, costo_total: "" };
@@ -41,19 +38,13 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
         setForm((p) => ({ ...p, cantidades: { ...p.cantidades, [key]: val } }));
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
+        e.preventDefault(); setError(null);
         const payload = formToPayload(form);
-        if (payload.productos.length === 0) return setError("Ingresa al menos un producto.");
+        if (!payload.productos.length) return setError("Ingresa al menos un producto.");
         setEnviando(true);
-        try {
-            await onGuardar(payload);
-            if (!esEdicion) setForm(FORM_VACIO);
-        } catch (err) {
-            setError(err.response?.data?.message || "Error al guardar.");
-        } finally {
-            setEnviando(false);
-        }
+        try { await onGuardar(payload); if (!esEdicion) setForm(FORM_VACIO); }
+        catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
+        finally { setEnviando(false); }
     };
 
     return (
@@ -64,25 +55,18 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
                     {PRODUCTOS.map(({ key, label }) => (
                         <div key={key} className="flex flex-col items-center gap-2 bg-slate-50 rounded-xl px-3 py-4">
                             <span className="text-xs font-semibold text-slate-600 text-center">{label}</span>
-                            <input
-                                type="number" min="0"
-                                value={form.cantidades[key]}
+                            <input type="number" min="0" value={form.cantidades[key]}
                                 onChange={(e) => setCantidad(key, e.target.value)}
-                                className="w-full text-center px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 font-bold text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                            />
+                                className="w-full text-center px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 font-bold text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
                         </div>
                     ))}
                 </div>
             </div>
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo total (opcional)</label>
-                <input
-                    type="number" min="0"
-                    value={form.costo_total}
+                <input type="number" min="0" value={form.costo_total}
                     onChange={(e) => setForm((p) => ({ ...p, costo_total: e.target.value }))}
-                    placeholder="Ej: 45000"
-                    className={`${inputCls} sm:w-48`}
-                />
+                    placeholder="Ej: 45000" className={`${inputCls} sm:w-48`} />
             </div>
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>}
             <div className="flex gap-2">
@@ -94,25 +78,6 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
         </form>
     );
 };
-
-// ── Botones de filtro de tiempo ───────────────────────────────────────────
-const FiltroTiempo = ({ valor, onChange }) => (
-    <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-        {FILTRO_CONFIG.map(({ value, label }) => (
-            <button
-                key={value}
-                onClick={() => onChange(value)}
-                className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                    valor === value
-                        ? "bg-white text-blue-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                }`}
-            >
-                {label}
-            </button>
-        ))}
-    </div>
-);
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const LlenadoFila = ({ llenado, onEditar, onEliminar }) => (
@@ -135,7 +100,7 @@ const LlenadoFila = ({ llenado, onEditar, onEliminar }) => (
 );
 
 const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar }) => {
-    const totalesDia = items.reduce((acc, l) => {
+    const totales = items.reduce((acc, l) => {
         l.productos.forEach(({ producto, cantidad }) => { acc[producto] = (acc[producto] || 0) + cantidad; });
         return acc;
     }, {});
@@ -150,8 +115,8 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
-                        {Object.entries(totalesDia).map(([prod, cant]) => (
-                            <span key={prod} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{cant} {prod}</span>
+                        {Object.entries(totales).map(([p, c]) => (
+                            <span key={p} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{c} {p}</span>
                         ))}
                     </div>
                     <span className="text-slate-400 text-sm">{expanded ? "▲" : "▼"}</span>
@@ -168,51 +133,36 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
 
 // ── Página principal ──────────────────────────────────────────────────────
 const LlenadosPage = () => {
-    const [llenados,     setLlenados]     = useState([]);
-    const [cargando,     setCargando]     = useState(true);
-    const [error,        setError]        = useState(null);
+    const { items: llenados, cargando, error, agregar, actualizar, eliminar: eliminarLocal } =
+        useListaCrud(() => obtenerLlenados().then((r) => r.data));
+
     const [filtroTiempo, setFiltroTiempo] = useState("hoy");
     const [expanded,     setExpanded]     = useState(new Set());
     const [editando,     setEditando]     = useState(null);
 
-    const cargarLlenados = async () => {
-        try { setCargando(true); const { data } = await obtenerLlenados(); setLlenados(data); }
-        catch { setError("No se pudo conectar con el servidor."); }
-        finally { setCargando(false); }
-    };
-
-    useEffect(() => { cargarLlenados(); }, []);
-
-    const handleFiltro = (valor) => { setFiltroTiempo(valor); setExpanded(new Set()); };
-
-    const toggleDia = (key) => setExpanded((prev) => {
-        const next = new Set(prev);
-        next.has(key) ? next.delete(key) : next.add(key);
-        return next;
+    const handleFiltro = (val) => { setFiltroTiempo(val); setExpanded(new Set()); };
+    const toggleDia = (key) => setExpanded((p) => {
+        const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n;
     });
 
-    const handleCrear   = async (payload) => { const { data } = await crearLlenado(payload); setLlenados((p) => [data, ...p]); };
-    const handleEditar  = async (payload) => {
+    const handleCrear  = async (payload) => { const { data } = await crearLlenado(payload); agregar(data); };
+    const handleEditar = async (payload) => {
         const { data } = await actualizarLlenado(editando._id, payload);
-        setLlenados((p) => p.map((l) => (l._id === data._id ? data : l)));
-        setEditando(null);
+        actualizar(data); setEditando(null);
     };
     const handleEliminar = async (id) => {
         if (!window.confirm("Eliminar este llenado?")) return;
-        await eliminarLlenado(id);
-        setLlenados((p) => p.filter((l) => l._id !== id));
+        await eliminarLlenado(id); eliminarLocal(id);
     };
 
-    const filtrados = filtrarPorTiempo(llenados, filtroTiempo);
-    const porDia    = groupByDay(filtrados);
-    const dias      = Object.keys(porDia).sort().reverse();
-
-    // Resumen acumulado del período seleccionado
-    const acumulado = filtrados.reduce((acc, l) => {
+    const filtrados  = filtrarPorTiempo(llenados, filtroTiempo);
+    const porDia     = groupByDay(filtrados);
+    const dias       = Object.keys(porDia).sort().reverse();
+    const labelCorto = FILTRO_CONFIG.find((f) => f.value === filtroTiempo)?.labelCorto || "";
+    const acumulado  = filtrados.reduce((acc, l) => {
         l.productos.forEach(({ producto, cantidad }) => { acc[producto] = (acc[producto] || 0) + cantidad; });
         return acc;
     }, {});
-    const labelCorto = FILTRO_CONFIG.find((f) => f.value === filtroTiempo)?.labelCorto || "";
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
@@ -221,7 +171,6 @@ const LlenadosPage = () => {
                 <p className="text-sm text-slate-500 mt-1">Registro de cargas de la camioneta.</p>
             </div>
 
-            {/* Resumen del período */}
             <div className="max-w-3xl mx-auto grid grid-cols-3 gap-3 mb-6">
                 {PRODUCTOS.map(({ key, label }) => (
                     <div key={key} className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4 text-center">
@@ -232,17 +181,14 @@ const LlenadosPage = () => {
                 ))}
             </div>
 
-            {/* Formulario */}
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Registrar carga</h2>
                 <FormLlenado onGuardar={handleCrear} />
             </div>
 
-            {/* Filtros + historial */}
             <div className="max-w-3xl mx-auto flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-slate-700">
-                    Historial
-                    <span className="ml-2 text-sm font-normal text-slate-400">({filtrados.length} registros)</span>
+                    Historial <span className="ml-2 text-sm font-normal text-slate-400">({filtrados.length} registros)</span>
                 </h2>
                 <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
@@ -260,12 +206,8 @@ const LlenadosPage = () => {
 
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar llenado">
                 {editando && (
-                    <FormLlenado
-                        inicial={llenadoToForm(editando)}
-                        onGuardar={handleEditar}
-                        onCancelar={() => setEditando(null)}
-                        esEdicion
-                    />
+                    <FormLlenado inicial={llenadoToForm(editando)}
+                        onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>
         </div>

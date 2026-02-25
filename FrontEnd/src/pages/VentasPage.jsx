@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { obtenerClientes } from "../services/clienteService";
 import { obtenerVentas, crearVenta, actualizarVenta, anularVenta } from "../services/ventasService";
+import useListaCrud from "../hooks/useListaCrud";
+import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
-
-const inputCls     = "w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white";
-const btnPrimary   = "px-5 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors";
-const btnSecondary = "px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-700 border border-slate-200 rounded-xl hover:border-blue-400 transition-colors";
+import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 // ── Constantes del formulario ─────────────────────────────────────────────
 const PRODUCTOS = [
@@ -26,8 +25,9 @@ const PROD_VACIO = {
 };
 const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO } };
 
-const calcularItems = (productos) =>
-    Object.entries(productos)
+// Helpers
+const calcItems = (prods) =>
+    Object.entries(prods)
         .filter(([, v]) => Number(v.cantidad) > 0)
         .map(([producto, v]) => ({
             producto,
@@ -36,41 +36,35 @@ const calcularItems = (productos) =>
             subtotal:        Number(v.cantidad) * Number(v.precio_unitario),
         }));
 
-const ventaToForm = (venta) => {
-    const productos = { ...PROD_VACIO };
-    venta.items.forEach(({ producto, cantidad, precio_unitario }) => {
-        productos[producto] = { cantidad, precio_unitario };
-    });
-    return { cliente: venta.cliente?._id || venta.cliente, metodo_pago: venta.metodo_pago, descuento: venta.descuento, productos };
+const ventaToForm = (v) => {
+    const prods = { ...PROD_VACIO };
+    v.items.forEach(({ producto, cantidad, precio_unitario }) => { prods[producto] = { cantidad, precio_unitario }; });
+    return { cliente: v.cliente?._id || v.cliente, metodo_pago: v.metodo_pago, descuento: v.descuento, productos: prods };
 };
 
-// ── Formulario crear/editar venta ─────────────────────────────────────────
+// ── Formulario ────────────────────────────────────────────────────────────
 const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form,     setForm]     = useState(inicial);
     const [enviando, setEnviando] = useState(false);
     const [error,    setError]    = useState(null);
 
-    const items = calcularItems(form.productos);
-    const total = items.reduce((acc, i) => acc + i.subtotal, 0) - Number(form.descuento);
+    const items = calcItems(form.productos);
+    const total = items.reduce((a, i) => a + i.subtotal, 0) - Number(form.descuento);
 
     const setProd = (key, campo, val) =>
         setForm((p) => ({ ...p, productos: { ...p.productos, [key]: { ...p.productos[key], [campo]: val } } }));
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        if (!form.cliente) return setError("Selecciona un cliente.");
-        if (items.length === 0) return setError("Ingresa al menos un producto.");
-        if (total < 0) return setError("El total no puede ser negativo.");
+        e.preventDefault(); setError(null);
+        if (!form.cliente)     return setError("Selecciona un cliente.");
+        if (!items.length)     return setError("Ingresa al menos un producto.");
+        if (total < 0)         return setError("El total no puede ser negativo.");
         setEnviando(true);
         try {
             await onGuardar({ cliente: form.cliente, metodo_pago: form.metodo_pago, descuento: Number(form.descuento), items, total });
             if (!esEdicion) setForm(FORM_VACIO);
-        } catch (err) {
-            setError(err.response?.data?.message || "Error al guardar.");
-        } finally {
-            setEnviando(false);
-        }
+        } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
+        finally { setEnviando(false); }
     };
 
     return (
@@ -134,7 +128,6 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                 </div>
             )}
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>}
-
             <div className="flex gap-2">
                 <button type="submit" disabled={enviando} className={btnPrimary}>
                     {enviando ? "Guardando..." : esEdicion ? "Actualizar venta" : "Registrar venta"}
@@ -145,38 +138,17 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
     );
 };
 
-// ── Botones de filtro de tiempo ───────────────────────────────────────────
-const FiltroTiempo = ({ valor, onChange }) => (
-    <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-        {FILTRO_CONFIG.map(({ value, label }) => (
-            <button
-                key={value}
-                onClick={() => onChange(value)}
-                className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                    valor === value
-                        ? "bg-white text-blue-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                }`}
-            >
-                {label}
-            </button>
-        ))}
-    </div>
-);
-
-// ── Badge de metodo de pago ───────────────────────────────────────────────
-const MetodoBadge = ({ metodo }) => {
-    const estilos = {
-        efectivo:      "bg-emerald-50 text-emerald-700 border-emerald-200",
-        fiado:         "bg-red-50    text-red-700    border-red-200",
-        transferencia: "bg-blue-50   text-blue-700   border-blue-200",
-    };
-    return (
-        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${estilos[metodo] || "bg-slate-100"}`}>
-            {metodo}
-        </span>
-    );
+// ── Badge de método ───────────────────────────────────────────────────────
+const METODO_CLS = {
+    efectivo:      "bg-emerald-50 text-emerald-700 border-emerald-200",
+    fiado:         "bg-red-50    text-red-700    border-red-200",
+    transferencia: "bg-blue-50   text-blue-700   border-blue-200",
 };
+const MetodoBadge = ({ metodo }) => (
+    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${METODO_CLS[metodo] || "bg-slate-100"}`}>
+        {metodo}
+    </span>
+);
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const VentaFila = ({ venta, onEditar, onAnular }) => (
@@ -203,79 +175,67 @@ const VentaFila = ({ venta, onEditar, onAnular }) => (
     </div>
 );
 
-const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onAnular }) => {
-    const totalDia = items.reduce((acc, v) => acc + v.total, 0);
-    return (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <button onClick={() => onToggle(diaKey)}
-                className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition text-left">
-                <div>
-                    <p className="text-sm font-bold text-slate-800 capitalize">{formatFechaDia(diaKey + "T12:00:00")}</p>
-                    <p className="text-xs text-slate-400">{items.length} {items.length === 1 ? "venta" : "ventas"}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <p className="text-sm font-bold text-slate-700">{formatPeso(totalDia)}</p>
-                    <span className="text-slate-400 text-sm">{expanded ? "▲" : "▼"}</span>
-                </div>
-            </button>
-            {expanded && (
-                <div className="px-5 pb-3 border-t border-slate-100">
-                    {items.map((v) => <VentaFila key={v._id} venta={v} onEditar={onEditar} onAnular={onAnular} />)}
-                </div>
-            )}
-        </div>
-    );
-};
+const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onAnular }) => (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <button onClick={() => onToggle(diaKey)}
+            className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition text-left">
+            <div>
+                <p className="text-sm font-bold text-slate-800 capitalize">{formatFechaDia(diaKey + "T12:00:00")}</p>
+                <p className="text-xs text-slate-400">{items.length} {items.length === 1 ? "venta" : "ventas"}</p>
+            </div>
+            <div className="flex items-center gap-3">
+                <p className="text-sm font-bold text-slate-700">{formatPeso(items.reduce((a, v) => a + v.total, 0))}</p>
+                <span className="text-slate-400 text-sm">{expanded ? "▲" : "▼"}</span>
+            </div>
+        </button>
+        {expanded && (
+            <div className="px-5 pb-3 border-t border-slate-100">
+                {items.map((v) => <VentaFila key={v._id} venta={v} onEditar={onEditar} onAnular={onAnular} />)}
+            </div>
+        )}
+    </div>
+);
 
 // ── Página principal ──────────────────────────────────────────────────────
 const VentasPage = () => {
-    const [ventas,       setVentas]       = useState([]);
-    const [clientes,     setClientes]     = useState([]);
-    const [cargando,     setCargando]     = useState(true);
-    const [error,        setError]        = useState(null);
+    const { items: ventas,   cargando: cargV, error: errorV, cargar: recargarVentas } =
+        useListaCrud(() => obtenerVentas().then((r) => r.data));
+    const { items: clientes, cargando: cargC, error: errorC } =
+        useListaCrud(() => obtenerClientes().then((r) => r.data));
+
     const [filtroTiempo, setFiltroTiempo] = useState("hoy");
     const [expanded,     setExpanded]     = useState(new Set());
     const [editando,     setEditando]     = useState(null);
     const [modalCrear,   setModalCrear]   = useState(false);
 
-    const cargarDatos = async () => {
-        try {
-            setCargando(true);
-            const [{ data: v }, { data: c }] = await Promise.all([obtenerVentas(), obtenerClientes()]);
-            setVentas(v);
-            setClientes(c);
-        } catch { setError("No se pudo conectar con el servidor."); }
-        finally { setCargando(false); }
-    };
+    const cargando = cargV || cargC;
+    const error    = errorV || errorC;
 
-    useEffect(() => { cargarDatos(); }, []);
-
-    const handleFiltro = (valor) => { setFiltroTiempo(valor); setExpanded(new Set()); };
-
-    const toggleDia = (key) => setExpanded((prev) => {
-        const next = new Set(prev);
-        next.has(key) ? next.delete(key) : next.add(key);
-        return next;
+    const handleFiltro = (val) => { setFiltroTiempo(val); setExpanded(new Set()); };
+    const toggleDia = (key) => setExpanded((p) => {
+        const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n;
     });
 
-    const handleCrear  = async (payload) => { await crearVenta(payload); await cargarDatos(); setModalCrear(false); };
-    const handleEditar = async (payload) => { await actualizarVenta(editando._id, payload); await cargarDatos(); setEditando(null); };
+    const handleCrear  = async (payload) => {
+        await crearVenta(payload); await recargarVentas(); setModalCrear(false);
+    };
+    const handleEditar = async (payload) => {
+        await actualizarVenta(editando._id, payload); await recargarVentas(); setEditando(null);
+    };
     const handleAnular = async (id) => {
         if (!window.confirm("Anular esta venta? Se revertira la deuda si era fiado.")) return;
-        await anularVenta(id);
-        setVentas((p) => p.filter((v) => v._id !== id));
+        await anularVenta(id); await recargarVentas();
     };
 
-    const filtradas  = filtrarPorTiempo(ventas, filtroTiempo);
-    const porDia     = groupByDay(filtradas);
-    const dias       = Object.keys(porDia).sort().reverse();
-    const totalPeriodo = filtradas.reduce((acc, v) => acc + v.total, 0);
-    const totalFiado   = filtradas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + v.total, 0);
+    const filtradas    = filtrarPorTiempo(ventas, filtroTiempo);
+    const porDia       = groupByDay(filtradas);
+    const dias         = Object.keys(porDia).sort().reverse();
+    const totalPeriodo = filtradas.reduce((a, v) => a + v.total, 0);
+    const totalFiado   = filtradas.filter((v) => v.metodo_pago === "fiado").reduce((a, v) => a + v.total, 0);
     const labelCorto   = FILTRO_CONFIG.find((f) => f.value === filtroTiempo)?.labelCorto || "";
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
-            {/* Header */}
             <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-800">Ventas</h1>
@@ -284,27 +244,22 @@ const VentasPage = () => {
                 <button onClick={() => setModalCrear(true)} className={btnPrimary}>+ Nueva venta</button>
             </div>
 
-            {/* KPIs del período */}
             <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4 text-center">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider capitalize">Ventas {labelCorto}</p>
-                    <p className="text-2xl font-extrabold text-slate-800 mt-1">{filtradas.length}</p>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4 text-center">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider capitalize">Facturado {labelCorto}</p>
-                    <p className="text-xl font-extrabold text-slate-800 mt-1">{formatPeso(totalPeriodo)}</p>
-                </div>
-                <div className="bg-white border border-red-200 rounded-2xl shadow-sm px-4 py-4 text-center col-span-2 sm:col-span-1">
-                    <p className="text-xs text-red-400 uppercase tracking-wider capitalize">Fiado {labelCorto}</p>
-                    <p className="text-xl font-extrabold text-red-600 mt-1">{formatPeso(totalFiado)}</p>
-                </div>
+                {[
+                    { label: `Ventas ${labelCorto}`,     val: filtradas.length,  fmt: false, cls: "text-slate-800" },
+                    { label: `Facturado ${labelCorto}`,  val: totalPeriodo,       fmt: true,  cls: "text-slate-800" },
+                    { label: `Fiado ${labelCorto}`,      val: totalFiado,         fmt: true,  cls: "text-red-600",  border: "border-red-200", span: true },
+                ].map(({ label, val, fmt, cls, border = "border-slate-200", span }) => (
+                    <div key={label} className={`bg-white border ${border} rounded-2xl shadow-sm px-4 py-4 text-center ${span ? "col-span-2 sm:col-span-1" : ""}`}>
+                        <p className="text-xs text-slate-400 uppercase tracking-wider capitalize">{label}</p>
+                        <p className={`text-xl font-extrabold mt-1 ${cls}`}>{fmt ? formatPeso(val) : val}</p>
+                    </div>
+                ))}
             </div>
 
-            {/* Filtros + historial */}
             <div className="max-w-4xl mx-auto flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-slate-700">
-                    Historial
-                    <span className="ml-2 text-sm font-normal text-slate-400">({filtradas.length} registros)</span>
+                    Historial <span className="ml-2 text-sm font-normal text-slate-400">({filtradas.length} registros)</span>
                 </h2>
                 <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
@@ -320,21 +275,13 @@ const VentasPage = () => {
                 ))}
             </div>
 
-            {/* Modal nueva venta */}
             <Modal isOpen={modalCrear} onClose={() => setModalCrear(false)} title="Nueva venta" maxWidth="max-w-xl">
                 <FormVenta clientes={clientes} onGuardar={handleCrear} onCancelar={() => setModalCrear(false)} />
             </Modal>
-
-            {/* Modal editar venta */}
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar venta" maxWidth="max-w-xl">
                 {editando && (
-                    <FormVenta
-                        clientes={clientes}
-                        inicial={ventaToForm(editando)}
-                        onGuardar={handleEditar}
-                        onCancelar={() => setEditando(null)}
-                        esEdicion
-                    />
+                    <FormVenta clientes={clientes} inicial={ventaToForm(editando)}
+                        onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>
         </div>
