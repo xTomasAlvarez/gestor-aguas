@@ -51,9 +51,9 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
 // ── Tarjeta de cliente ────────────────────────────────────────────────────
 const ClienteCard = ({ cliente, onEditar, onEliminar }) => {
-    const { nombre, direccion, telefono, deuda } = cliente;
-    const { bidones_20L = 0, bidones_12L = 0, sodas = 0, saldo = 0 } = deuda || {};
-    const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo > 0;
+    const { nombre, direccion, telefono, deuda, saldo_pendiente = 0 } = cliente;
+    const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
+    const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo_pendiente > 0;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
@@ -86,10 +86,15 @@ const ClienteCard = ({ cliente, onEditar, onEliminar }) => {
                 </div>
             </div>
 
-            {saldo > 0 && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wider">Deuda monetaria</p>
-                    <p className="text-sm font-extrabold text-red-700">${saldo.toLocaleString("es-AR")}</p>
+            {saldo_pendiente > 0 && (
+                <div className="bg-red-600 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <div>
+                        <p className="text-xs font-semibold text-red-200 uppercase tracking-wider">Monto adeudado</p>
+                        <p className="text-xl font-extrabold text-white mt-0.5">${saldo_pendiente.toLocaleString("es-AR")}</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} className="w-7 h-7 stroke-red-300">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v1m0 10v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                    </svg>
                 </div>
             )}
 
