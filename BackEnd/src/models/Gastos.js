@@ -1,27 +1,30 @@
-import mongoose, {Schema} from "mongoose";
+import mongoose from "mongoose";
 
-const GastosSchema = new Schema({
-    llenado:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref:"Llenado",
-        required:false
+const { Schema, model } = mongoose;
+
+const gastoSchema = new Schema(
+    {
+        fecha: {
+            type:    Date,
+            default: Date.now,
+        },
+        concepto: {
+            type:     String,
+            required: [true, "El concepto del gasto es obligatorio."],
+            trim:     true,
+        },
+        monto: {
+            type:     Number,
+            required: [true, "El monto es obligatorio."],
+            min:      [0, "El monto no puede ser negativo."],
+        },
     },
-    fecha:{
-        type: Date,
-        default: Date.now,
-        required: true
-    },
-    nombre:{
-        type:String,
-        required:true,
-        trim:true
-    },
-    monto:{
-        type: Number,
-        required:true
+    {
+        timestamps: true,
+        versionKey: false,
     }
-}, {
-    timestamps: true 
-});
+);
 
-export default mongoose.model("Gastos", GastosSchema)
+const Gasto = model("Gasto", gastoSchema);
+
+export default Gasto;

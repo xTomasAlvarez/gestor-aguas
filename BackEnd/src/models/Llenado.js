@@ -1,36 +1,48 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
 
-const LlenadoSchema = new Schema({
-    fecha:{
-        type:Date,
-        default:Date.now,
-        required:true
+const { Schema, model } = mongoose;
+
+// ── Sub-schema: Producto llenado ───────────────────────────────────────────
+const productoLlenadoSchema = new Schema(
+    {
+        producto: {
+            type:     String,
+            enum:     ["Bidon 20L", "Bidon 12L", "Soda"],
+            required: [true, "El tipo de producto es obligatorio."],
+        },
+        cantidad: {
+            type:     Number,
+            required: [true, "La cantidad es obligatoria."],
+            min:      [1, "La cantidad mínima es 1."],
+        },
     },
-    items: [
-        {
-            producto: { 
-                type: String, 
-                required: true, 
-                enum: ['Bidon 20L', 'Bidon 12L', 'Soda'] // Solo permitimos estos nombres para evitar errores de tipeo
-            },
-            cantidad: { 
-                type: Number,
-                required: true,
-                min: 1
-            },
-            precio_unitario: {
-                type: Number,
-                required: true
-            },
-            subtotal: Number
-        }
-    ],
-    total:{
-        type: Number,
-        required: true
-    }
-}, {
-    timestamps: true
-});
+    { _id: false }
+);
 
-export default mongoose.model("Llenado", LlenadoSchema)
+const llenadoSchema = new Schema(
+    {
+        fecha: {
+            type:    Date,
+            default: Date.now,
+        },
+        productos: {
+            type:     [productoLlenadoSchema],
+            validate: {
+                validator: (arr) => arr.length > 0,
+                message:   "El llenado debe registrar al menos un producto.",
+            },
+        },
+        costo_total: {
+            type:    Number,
+            default: null,
+        },
+    },
+    {
+        timestamps: true,
+        versionKey: false,
+    }
+);
+
+const Llenado = model("Llenado", llenadoSchema);
+
+export default Llenado;

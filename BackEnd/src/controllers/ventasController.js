@@ -1,182 +1,129 @@
 import Venta from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
-import { calcularImpactoDeuda } from "../helpers/calcularImpactoDeuda.js";
 
-// =====================================================================
-// CONTROLADORES
-// =====================================================================
+// ── Helper: construye el objeto $inc para la deuda del cliente ─────────────
+// Mapea cada item de la venta al campo correspondiente en deuda.*
+const construirIncDeuda = (items, multiplicador = 1) => {
+    const inc = {};
+    for (const item of items) {
+        if (item.producto === "Bidon 20L") {
+            inc["deuda.bidones_20L"] = (inc["deuda.bidones_20L"] || 0) + item.cantidad * multiplicador;
+        } else if (item.producto === "Bidon 12L") {
+            inc["deuda.bidones_12L"] = (inc["deuda.bidones_12L"] || 0) + item.cantidad * multiplicador;
+        } else if (item.producto === "Soda") {
+            inc["deuda.sodas"] = (inc["deuda.sodas"] || 0) + item.cantidad * multiplicador;
+        }
+    }
+    return inc;
+};
 
-// POST: Crear una nueva venta
+// ── POST /api/ventas ───────────────────────────────────────────────────────
+// Regla: Si metodo_pago === 'fiado', suma la deuda al cliente con $inc
 export const crearVenta = async (req, res) => {
     try {
-        const data = req.body;
+        const { metodo_pago, items, cliente: clienteId } = req.body;
 
-        // 1. Guardamos la venta en BD
-        // Usamos .create() que instancia y guarda en un solo paso
-        const nuevaVenta = await Venta.create(data);
-
-        // 2. LÓGICA DE NEGOCIO: SI ES FIADO, ACTUALIZAR CUENTA CORRIENTE
-        if (data.metodo_pago === "fiado") {
-            
-            // Usamos la función auxiliar para obtener los totales limpios
-            const totales = calcularImpactoDeuda(data.items);
-
-            // Actualización Atómica ($inc): Asegura que si llegan 2 ventas a la vez, se sumen bien.
-            await Cliente.findByIdAndUpdate(data.cliente, {
-                $inc: { 
-                    'deuda.bidones_20L': totales.bidones_20L,
-                    'deuda.bidones_12L': totales.bidones_12L,
-                    'deuda.sodas': totales.sodas
-                }
-            });
+        if (metodo_pago === "fiado") {
+            const incDeuda = construirIncDeuda(items, 1);
+            await Cliente.findByIdAndUpdate(clienteId, { $inc: incDeuda });
         }
 
-        // HTTP 201: Created (Recurso creado exitosamente)
+        const nuevaVenta = await Venta.create(req.body);
         res.status(201).json(nuevaVenta);
-
-    } catch (err) {
-        console.err("❌ err en crearVenta:", err);
-        res.status(500).json({ message: "err interno al procesar la venta", err: err.message });
+    } catch (error) {
+        res.status(500).json({ message: "Error al crear la venta.", error: error.message });
     }
 };
 
-// GET: Obtener historial de ventas con filtros
-import Venta from "../models/Venta.js";
-
+// ── GET /api/ventas ────────────────────────────────────────────────────────
 export const obtenerVentas = async (req, res) => {
     try {
-        const { fecha, metodo_pago, cliente } = req.query;
-        const filter = {};
-
-        // Filtros dinámicos con ternarios
-        metodo_pago ? filter.metodo_pago = metodo_pago : null;
-        cliente ? filter.cliente = cliente : null; // Aquí 'cliente' se espera que sea el ID
-        fecha ? filter.fecha = fecha : null;
-
-        const ventas = await Venta.find(filter)
-            .populate({ path: "cliente", select: "nombre" })
-            .sort({ createdAt: -1 });
+        const ventas = await Venta.find()
+            .populate("cliente", "nombre direccion")
+            .sort({ fecha: -1 });
 
         res.status(200).json(ventas);
-
-    } catch (err) {
-        console.error("❌ Error en obtenerVentas:", err);
-        res.status(500).json({ message: "Error al obtener ventas", error: err.message });
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener las ventas.", error: error.message });
     }
 };
 
-// GET: Obtener una venta por ID
-export const obtenerVentaById = async (req, res) => {
+// ── GET /api/ventas/:id ────────────────────────────────────────────────────
+export const obtenerVentaPorId = async (req, res) => {
     try {
-        const { id } = req.params;
-        const venta = await Venta.findById(id).populate({ path: "cliente", select: "nombre" });
-        
-        // Validación temprana: Si no existe, cortamos la ejecución aquí
+        const venta = await Venta.findById(req.params.id)
+            .populate("cliente", "nombre direccion");
+
         if (!venta) {
-            return res.status(404).json({ message: "La venta solicitada no existe" });
+            return res.status(404).json({ message: "Venta no encontrada." });
         }
 
         res.status(200).json(venta);
-
-    } catch (err) {
-        console.err("❌ err en obtenerVentaById:", err);
-        res.status(500).json({ message: "err al obtener la venta", err: err.message });
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener la venta.", error: error.message });
     }
 };
 
-// DELETE: Eliminar venta y revertir deuda si corresponde
-export const eliminarVenta = async (req, res) => {
+// ── PUT /api/ventas/:id ────────────────────────────────────────────────────
+// Regla VIAJE EN EL TIEMPO:
+//   1. Si la venta ORIGINAL era 'fiado' → revertir la deuda previa (multiplicador -1)
+//   2. Si la venta NUEVA     es  'fiado' → sumar la deuda nueva   (multiplicador +1)
+export const actualizarVenta = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        // 1. Buscamos la venta antes de borrarla (Necesitamos saber qué tenía)
-        const venta = await Venta.findById(id);
-
-        if (!venta) {
-            return res.status(404).json({ message: "No se puede eliminar: Venta no encontrada" });
+        // Paso 1: Buscar la venta original
+        const ventaOriginal = await Venta.findById(req.params.id);
+        if (!ventaOriginal) {
+            return res.status(404).json({ message: "Venta no encontrada." });
         }
 
-        // 2. REVERSIÓN DE DEUDA (Rollback)
-        if (venta.metodo_pago === 'fiado') {
-            const totales = calcularImpactoDeuda(venta.items);
-
-            // Restamos usando los valores calculados en negativo
-            await Cliente.findByIdAndUpdate(venta.cliente, {
-                $inc: {
-                    'deuda.bidones_20L': -totales.bidones_20L,
-                    'deuda.bidones_12L': -totales.bidones_12L,
-                    'deuda.sodas': -totales.sodas
-                }
-            });
+        // Paso 2: Revertir deuda si la venta original era 'fiado'
+        if (ventaOriginal.metodo_pago === "fiado") {
+            const incReversion = construirIncDeuda(ventaOriginal.items, -1);
+            await Cliente.findByIdAndUpdate(ventaOriginal.cliente, { $inc: incReversion });
         }
 
-        // 3. Eliminación física
-        await Venta.findByIdAndDelete(id);
-
-        res.status(200).json({ message: "Venta eliminada y saldos ajustados correctamente" });
-
-    } catch (err) {
-        console.err("❌ err en eliminarVenta:", err);
-        res.status(500).json({ message: "err crítico al eliminar venta", err: err.message });
-    }
-};
-
-// PUT: Modificar venta 
-export const modificarVenta = async (req, res) => {
-    const { id } = req.params;
-    const { items, total, metodo_pago, cliente } = req.body; 
-
-    try {
-        // 1. Obtener estado ANTERIOR de la venta
-        const ventaAnterior = await Venta.findById(id);
-        if (!ventaAnterior) return res.status(404).json({ message: "Venta no encontrada" });
-
-        // =======================================================
-        // FASE 1: DESHACER EL PASADO (Rollback venta vieja)
-        // =======================================================
-        if (ventaAnterior.metodo_pago === 'fiado') {
-            const totalesViejos = calcularImpactoDeuda(ventaAnterior.items);
-            
-            // Restamos la deuda que generó la venta vieja
-            await Cliente.findByIdAndUpdate(ventaAnterior.cliente, {
-                $inc: {
-                    'deuda.bidones_20L': -totalesViejos.bidones_20L,
-                    'deuda.bidones_12L': -totalesViejos.bidones_12L,
-                    'deuda.sodas': -totalesViejos.sodas
-                }
-            });
+        // Paso 3: Aplicar nueva deuda si la venta actualizada es 'fiado'
+        const { metodo_pago: nuevoMetodo, items: nuevosItems, cliente: nuevoClienteId } = req.body;
+        if (nuevoMetodo === "fiado") {
+            const incNueva = construirIncDeuda(nuevosItems, 1);
+            // Si el cliente cambió, aplicar sobre el nuevo; si no, sobre el original
+            const clienteTarget = nuevoClienteId || ventaOriginal.cliente;
+            await Cliente.findByIdAndUpdate(clienteTarget, { $inc: incNueva });
         }
 
-        // =======================================================
-        // FASE 2: ACTUALIZAR EL PRESENTE (Guardar cambios)
-        // =======================================================
-        ventaAnterior.items = items;
-        ventaAnterior.total = total;
-        ventaAnterior.metodo_pago = metodo_pago;
-        ventaAnterior.cliente = cliente; 
-
-        const ventaActualizada = await ventaAnterior.save();
-
-        // =======================================================
-        // FASE 3: APLICAR EL FUTURO (Impactar venta nueva)
-        // =======================================================
-        if (metodo_pago === 'fiado') {
-            const totalesNuevos = calcularImpactoDeuda(items);
-
-            // Sumamos la deuda de la versión editada
-            await Cliente.findByIdAndUpdate(cliente, {
-                $inc: {
-                    'deuda.bidones_20L': totalesNuevos.bidones_20L,
-                    'deuda.bidones_12L': totalesNuevos.bidones_12L,
-                    'deuda.sodas': totalesNuevos.sodas
-                }
-            });
-        }
+        // Paso 4: Guardar la venta actualizada
+        const ventaActualizada = await Venta.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
 
         res.status(200).json(ventaActualizada);
+    } catch (error) {
+        res.status(500).json({ message: "Error al actualizar la venta.", error: error.message });
+    }
+};
 
-    } catch (err) {
-        console.err("❌ err en modificarVenta:", err);
-        res.status(500).json({ message: "err al modificar la venta", err: err.message });
+// ── DELETE /api/ventas/:id ─────────────────────────────────────────────────
+// Regla: Si la venta era 'fiado', revertir la deuda con $inc antes de borrar
+export const eliminarVenta = async (req, res) => {
+    try {
+        const venta = await Venta.findById(req.params.id);
+        if (!venta) {
+            return res.status(404).json({ message: "Venta no encontrada." });
+        }
+
+        // Revertir deuda si corresponde
+        if (venta.metodo_pago === "fiado") {
+            const incReversion = construirIncDeuda(venta.items, -1);
+            await Cliente.findByIdAndUpdate(venta.cliente, { $inc: incReversion });
+        }
+
+        // Eliminar físicamente la venta
+        await Venta.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({ message: "Venta eliminada y deuda revertida correctamente." });
+    } catch (error) {
+        res.status(500).json({ message: "Error al eliminar la venta.", error: error.message });
     }
 };

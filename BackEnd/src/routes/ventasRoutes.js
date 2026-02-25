@@ -1,15 +1,26 @@
-import { Router } from "express"
-import {obtenerVentas, obtenerVentaById, crearVenta, eliminarVenta, modificarVenta} from "../controllers/ventasController.js"
+import { Router } from "express";
+import {
+    crearVenta,
+    obtenerVentas,
+    obtenerVentaPorId,
+    actualizarVenta,
+    eliminarVenta,
+} from "../controllers/ventasController.js";
 
-const router = Router()
+const router = Router();
 
-// Ruta: /api/ventas
+// GET  /api/ventas      → Listar todas las ventas
+// POST /api/ventas      → Crear una nueva venta
+router.route("/")
+    .get(obtenerVentas)
+    .post(crearVenta);
 
-router.get("/", obtenerVentas);
-router.get("/:id", obtenerVentaById);
-router.post("/", crearVenta);
-router.delete("/:id", eliminarVenta);
-router.put("/:id", modificarVenta);
+// GET    /api/ventas/:id  → Obtener una venta por ID
+// PUT    /api/ventas/:id  → Actualizar una venta (con reversión de deuda)
+// DELETE /api/ventas/:id  → Eliminar una venta (con reversión de deuda)
+router.route("/:id")
+    .get(obtenerVentaPorId)
+    .put(actualizarVenta)
+    .delete(eliminarVenta);
 
-export default router
-
+export default router;

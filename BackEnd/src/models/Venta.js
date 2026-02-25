@@ -1,46 +1,73 @@
-import mongoose, { Model, Schema } from "mongoose";
+import mongoose from "mongoose";
 
-const VentaSchema = new Schema({
-    cliente:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref:"Cliente",
-        required: true
+const { Schema, model } = mongoose;
+
+// ── Sub-schema: Item de venta ──────────────────────────────────────────────
+const itemSchema = new Schema(
+    {
+        producto: {
+            type:     String,
+            enum:     ["Bidon 20L", "Bidon 12L", "Soda"],
+            required: [true, "El producto es obligatorio."],
+        },
+        cantidad: {
+            type:     Number,
+            required: [true, "La cantidad es obligatoria."],
+            min:      [1, "La cantidad mínima es 1."],
+        },
+        precio_unitario: {
+            type:     Number,
+            required: [true, "El precio unitario es obligatorio."],
+            min:      [0, "El precio no puede ser negativo."],
+        },
+        subtotal: {
+            type:     Number,
+            required: [true, "El subtotal es obligatorio."],
+        },
     },
-    fecha:{
-        type:Date,
-        required:true,
-        default: Date.now
-    },
-    items: [
-        {
-            producto: { 
-                type: String, 
-                required: true, 
-                enum: ['Bidon 20L', 'Bidon 12L', 'Soda'] // Solo permitimos estos nombres para evitar errores de tipeo
+    { _id: false }
+);
+
+// ── Schema principal: Venta ────────────────────────────────────────────────
+const ventaSchema = new Schema(
+    {
+        cliente: {
+            type:     Schema.Types.ObjectId,
+            ref:      "Cliente",
+            required: [true, "El cliente es obligatorio."],
+        },
+        fecha: {
+            type:    Date,
+            default: Date.now,
+        },
+        items: {
+            type:     [itemSchema],
+            validate: {
+                validator: (arr) => arr.length > 0,
+                message:   "La venta debe tener al menos un item.",
             },
-            cantidad: { 
-                type: Number,
-                required: true,
-                min: 1
-            },
-            precio_unitario: {
-                type: Number,
-                required: true
-            }, // Precio congelado al momento de la venta
-            subtotal: Number
-        }
-    ],
-    total:{
-        type: Number,
-        required: true
+        },
+        descuento: {
+            type:    Number,
+            default: 0,
+            min:     [0, "El descuento no puede ser negativo."],
+        },
+        total: {
+            type:     Number,
+            required: [true, "El total es obligatorio."],
+        },
+        metodo_pago: {
+            type:    String,
+            enum:    ["efectivo", "fiado", "transferencia"],
+            default: "efectivo",
+        },
     },
-    metodo_pago: {
-        type: String,
-        enum: ['efectivo', 'fiado', 'transferencia'], // Lista cerrada de opciones
-        default: 'efectivo'
+    {
+        timestamps: true,
+        versionKey: false,
     }
-}, {
-    timestamps: true
-});
-// Hay combos con dispenser y bidones, son mensualizados donde el precio de los bidones no se ajusta directamente al unitario
-export default mongoose.model("Venta",VentaSchema);
+);
+
+const Venta = model("Venta", ventaSchema);
+
+export default Venta;

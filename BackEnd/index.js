@@ -7,9 +7,9 @@ import morgan from "morgan";
 // ── Importaciones internas ─────────────────────────────────────────────────
 import { dbConect } from "./src/config/dbConect.js";
 import clientesRoutes from "./src/routes/clientesRoutes.js";
-// import ventasRoutes   from "./src/routes/ventasRoutes.js";
-// import gastosRoutes   from "./src/routes/gastosRoutes.js";
-// import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
+import ventasRoutes   from "./src/routes/ventasRoutes.js";
+import gastosRoutes   from "./src/routes/gastosRoutes.js";
+import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
 
 // ── Variables de entorno (con valores por defecto seguros) ─────────────────
 const {
@@ -32,9 +32,9 @@ dbConect(DB_URI);
 
 // ── Rutas de la API ────────────────────────────────────────────────────────
 app.use("/api/clientes", clientesRoutes);
-// app.use("/api/ventas",   ventasRoutes);
-// app.use("/api/gastos",   gastosRoutes);
-// app.use("/api/llenado",  llenadoRoutes);
+app.use("/api/ventas",   ventasRoutes);
+app.use("/api/gastos",    gastosRoutes);
+app.use("/api/llenados",  llenadoRoutes);
 
 // ── Arranque del servidor ──────────────────────────────────────────────────
 app.listen(PORT, HOST, () => {
