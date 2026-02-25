@@ -52,8 +52,8 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 // ── Tarjeta de cliente ────────────────────────────────────────────────────
 const ClienteCard = ({ cliente, onEditar, onEliminar }) => {
     const { nombre, direccion, telefono, deuda } = cliente;
-    const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
-    const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0;
+    const { bidones_20L = 0, bidones_12L = 0, sodas = 0, saldo = 0 } = deuda || {};
+    const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo > 0;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
@@ -85,6 +85,13 @@ const ClienteCard = ({ cliente, onEditar, onEliminar }) => {
                     ))}
                 </div>
             </div>
+
+            {saldo > 0 && (
+                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wider">Deuda monetaria</p>
+                    <p className="text-sm font-extrabold text-red-700">${saldo.toLocaleString("es-AR")}</p>
+                </div>
+            )}
 
             <div className="flex gap-2 pt-1 border-t border-slate-100">
                 <button onClick={() => onEditar(cliente)} className={btnSecondary}>Editar</button>

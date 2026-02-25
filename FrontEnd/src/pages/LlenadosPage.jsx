@@ -39,7 +39,19 @@ const Stepper = ({ label, value, onChange }) => (
                 onClick={() => onChange(Math.max(0, Number(value) - 1))}
                 className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 text-2xl font-bold transition-colors touch-manipulation select-none"
             >−</button>
-            <span className="w-10 text-center text-2xl font-extrabold text-slate-900 tabular-nums">{value}</span>
+            <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={value === 0 ? "" : value}
+                onChange={(e) => {
+                    const v = e.target.value;
+                    onChange(v === "" ? 0 : Math.max(0, Number(v) || 0));
+                }}
+                onBlur={(e) => { if (e.target.value === "") onChange(0); }}
+                placeholder="0"
+                className="w-12 text-center text-2xl font-extrabold text-slate-900 tabular-nums bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-lg px-0"
+            />
             <button
                 type="button"
                 onClick={() => onChange(Number(value) + 1)}

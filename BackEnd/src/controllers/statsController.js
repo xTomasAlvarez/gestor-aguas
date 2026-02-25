@@ -1,5 +1,6 @@
-import Venta  from "../models/Venta.js";
-import Gasto  from "../models/Gastos.js";
+import Venta   from "../models/Venta.js";
+import Gasto   from "../models/Gastos.js";
+import Cliente from "../models/Cliente.js";
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
@@ -21,22 +22,31 @@ export const getDashboardStats = async (req, res) => {
 
         // ── Resumen del mes actual ────────────────────────────────────────────
         const [resVentasMes = {}] = await Venta.aggregate([
-            { $match: { fecha: { $gte: inicioMes } } },
+            { $match: { fecha: { $gte: inicioMes }, $expr: { $gt: [{ $size: "$items" }, 0] } } },
             { $group: { _id: null, total: { $sum: "$total" }, cantidad: { $sum: 1 } } },
+        ]);
+        const [resCobrosMes = {}] = await Venta.aggregate([
+            { $match: { fecha: { $gte: inicioMes } } },
+            { $group: { _id: null, cobrado: { $sum: "$monto_pagado" } } },
         ]);
         const [resGastosMes = {}] = await Gasto.aggregate([
             { $match: { fecha: { $gte: inicioMes } } },
             { $group: { _id: null, total: { $sum: "$monto" } } },
         ]);
+        // Deuda real = suma de (total - monto_pagado) de todas las ventas con ítems
+        // Se usa $max para asegurar que nunca sea negativo (pagos en exceso no generan crédito negativo)
         const [resDeuda = {}] = await Venta.aggregate([
-            { $match: { metodo_pago: "fiado" } },
-            { $group: { _id: null, total: { $sum: "$total" } } },
+            { $match: { $expr: { $gt: [{ $size: "$items" }, 0] } } },
+            { $group: {
+                _id:   null,
+                total: { $sum: { $max: [0, { $subtract: ["$total", "$monto_pagado"] }] } },
+            }},
         ]);
 
-        // ── Evolución ingresos vs gastos (últimos 6 meses) ────────────────────
+        // Ingresos = monto_pagado (flujo de caja real, no valor nominal)
         const ingresosPorMes = await Venta.aggregate([
             { $match: { fecha: { $gte: haceSeismeses } } },
-            { $group: { _id: { anio: { $year: "$fecha" }, mes: { $month: "$fecha" } }, ingresos: { $sum: "$total" } } },
+            { $group: { _id: { anio: { $year: "$fecha" }, mes: { $month: "$fecha" } }, ingresos: { $sum: "$monto_pagado" } } },
         ]);
         const gastosPorMes = await Gasto.aggregate([
             { $match: { fecha: { $gte: haceSeismeses } } },
@@ -72,8 +82,9 @@ export const getDashboardStats = async (req, res) => {
             resumenMes: {
                 totalVentas:    resVentasMes.total  || 0,
                 cantidadVentas: resVentasMes.cantidad || 0,
+                totalCobrado:   resCobrosMes.cobrado || 0,
                 totalGastos:    resGastosMes.total  || 0,
-                balance:        (resVentasMes.total || 0) - (resGastosMes.total || 0),
+                balance:        (resCobrosMes.cobrado || 0) - (resGastosMes.total || 0),
                 deudaTotal:     resDeuda.total || 0,
             },
             evolucion,

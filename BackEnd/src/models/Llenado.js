@@ -36,6 +36,11 @@ const llenadoSchema = new Schema(
             type:    Number,
             default: null,
         },
+        gasto_ref: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "Gasto",
+            default: null,
+        },
     },
     {
         timestamps: true,

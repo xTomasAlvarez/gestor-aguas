@@ -35,7 +35,9 @@ const TablaVentas = ({ ventas }) => {
         <p className="text-center py-8 text-sm text-slate-400">Sin ventas para este dia.</p>
     );
 
-    const totalDia = ventas.reduce((acc, v) => acc + v.total, 0);
+    const totalDia  = ventas.reduce((acc, v) => acc + v.total, 0);
+    const totalAbono = ventas.reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const totalSaldo = ventas.reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? v.total)), 0);
 
     return (
         <div className="overflow-x-auto">
@@ -43,46 +45,60 @@ const TablaVentas = ({ ventas }) => {
                 <thead>
                     <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
                         <th className="text-left px-4 py-3 rounded-tl-xl font-semibold">Cliente</th>
-                        <th className="text-center px-3 py-3 font-semibold">20 L</th>
-                        <th className="text-center px-3 py-3 font-semibold">12 L</th>
-                        <th className="text-center px-3 py-3 font-semibold">Soda</th>
-                        <th className="text-right px-4 py-3 font-semibold">Total</th>
-                        <th className="text-center px-4 py-3 rounded-tr-xl font-semibold">Pago</th>
+                        <th className="text-center px-2 py-3 font-semibold">20L</th>
+                        <th className="text-center px-2 py-3 font-semibold">12L</th>
+                        <th className="text-center px-2 py-3 font-semibold">Soda</th>
+                        <th className="text-right px-3 py-3 font-semibold">Total</th>
+                        <th className="text-right px-3 py-3 font-semibold text-emerald-700">Abono</th>
+                        <th className="text-right px-3 py-3 font-semibold text-red-600">Saldo</th>
+                        <th className="text-center px-3 py-3 rounded-tr-xl font-semibold">Pago</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {ventas.map((v) => (
-                        <tr
-                            key={v._id}
-                            className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                                v.metodo_pago === "fiado" ? "bg-red-50/40" : ""
-                            }`}
-                        >
-                            <td className="px-4 py-3">
-                                <p className="font-semibold text-slate-800 leading-tight">
-                                    {v.cliente?.nombre || "—"}
-                                </p>
-                                {v.cliente?.direccion && (
-                                    <p className="text-xs text-slate-400 mt-0.5">{v.cliente.direccion}</p>
-                                )}
-                            </td>
-                            <td className="text-center px-3 py-3 font-bold text-slate-700">
-                                {cantProd(v.items, "Bidon 20L") || <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="text-center px-3 py-3 font-bold text-slate-700">
-                                {cantProd(v.items, "Bidon 12L") || <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="text-center px-3 py-3 font-bold text-slate-700">
-                                {cantProd(v.items, "Soda") || <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="text-right px-4 py-3 font-bold text-slate-800">
-                                {formatPeso(v.total)}
-                            </td>
-                            <td className="text-center px-4 py-3">
-                                <MetodoBadge metodo={v.metodo_pago} />
-                            </td>
-                        </tr>
-                    ))}
+                    {ventas.map((v) => {
+                        const abono = v.monto_pagado ?? v.total;
+                        const saldo = Math.max(0, v.total - abono);
+                        return (
+                            <tr
+                                key={v._id}
+                                className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                                    saldo > 0 ? "bg-red-50/30" : ""
+                                }`}
+                            >
+                                <td className="px-4 py-3">
+                                    <p className="font-semibold text-slate-800 leading-tight">
+                                        {v.cliente?.nombre || "—"}
+                                    </p>
+                                    {v.cliente?.direccion && (
+                                        <p className="text-xs text-slate-400 mt-0.5">{v.cliente.direccion}</p>
+                                    )}
+                                </td>
+                                <td className="text-center px-2 py-3 font-bold text-slate-700">
+                                    {cantProd(v.items, "Bidon 20L") || <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-center px-2 py-3 font-bold text-slate-700">
+                                    {cantProd(v.items, "Bidon 12L") || <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-center px-2 py-3 font-bold text-slate-700">
+                                    {cantProd(v.items, "Soda") || <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-right px-3 py-3 font-bold text-slate-800">
+                                    {formatPeso(v.total)}
+                                </td>
+                                <td className="text-right px-3 py-3 font-semibold text-emerald-700">
+                                    {formatPeso(abono)}
+                                </td>
+                                <td className={`text-right px-3 py-3 font-bold ${
+                                    saldo > 0 ? "text-red-600" : "text-slate-300"
+                                }`}>
+                                    {saldo > 0 ? formatPeso(saldo) : "—"}
+                                </td>
+                                <td className="text-center px-3 py-3">
+                                    <MetodoBadge metodo={v.metodo_pago} />
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
                 {/* Fila de totales */}
                 <tfoot>
@@ -91,18 +107,21 @@ const TablaVentas = ({ ventas }) => {
                             TOTAL DIA
                             <span className="ml-2 text-xs font-normal text-slate-500">({ventas.length} ventas)</span>
                         </td>
-                        <td className="text-center px-3 py-3">
+                        <td className="text-center px-2 py-3">
                             {ventas.reduce((acc, v) => acc + cantProd(v.items, "Bidon 20L"), 0) || "—"}
                         </td>
-                        <td className="text-center px-3 py-3">
+                        <td className="text-center px-2 py-3">
                             {ventas.reduce((acc, v) => acc + cantProd(v.items, "Bidon 12L"), 0) || "—"}
                         </td>
-                        <td className="text-center px-3 py-3">
+                        <td className="text-center px-2 py-3">
                             {ventas.reduce((acc, v) => acc + cantProd(v.items, "Soda"), 0) || "—"}
                         </td>
-                        <td className="text-right px-4 py-3 text-blue-700 rounded-br-xl" colSpan={2}>
-                            {formatPeso(totalDia)}
+                        <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
+                        <td className="text-right px-3 py-3 text-emerald-700">{formatPeso(totalAbono)}</td>
+                        <td className={`text-right px-3 py-3 ${totalSaldo > 0 ? "text-red-600" : "text-slate-300"}`}>
+                            {totalSaldo > 0 ? formatPeso(totalSaldo) : "—"}
                         </td>
+                        <td className="rounded-br-xl" />
                     </tr>
                 </tfoot>
             </table>

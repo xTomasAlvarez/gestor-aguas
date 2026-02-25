@@ -23,7 +23,7 @@ const PROD_VACIO = {
     "Bidon 12L": { cantidad: 0, precio_unitario: 1800 },
     "Soda":      { cantidad: 0, precio_unitario: 900  },
 };
-const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "" };
+const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "", esCobranza: false };
 
 // Helpers
 const calcItems = (prods) =>

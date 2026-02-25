@@ -115,11 +115,16 @@ const DashboardPage = () => {
                 {/* Tarjetas de resumen */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                     <StatCard
-                        label="Ventas del mes"
+                        label="Facturado mes"
                         value={formatPeso(resumenMes.totalVentas)}
                         sub={`${resumenMes.cantidadVentas} entregas`} />
                     <StatCard
-                        label="Gastos del mes"
+                        label="Cobrado mes"
+                        value={formatPeso(resumenMes.totalCobrado ?? resumenMes.totalVentas)}
+                        colorVal="text-emerald-700"
+                        border="border-emerald-100" />
+                    <StatCard
+                        label="Gastos mes"
                         value={formatPeso(resumenMes.totalGastos)}
                         colorVal="text-red-600"
                         border="border-red-100" />
@@ -127,12 +132,22 @@ const DashboardPage = () => {
                         label="Balance neto"
                         value={formatPeso(balance)}
                         colorVal={balance >= 0 ? "text-emerald-600" : "text-red-600"}
-                        border={balance >= 0 ? "border-emerald-100" : "border-red-100"} />
-                    <StatCard
-                        label="Deuda fiado"
-                        value={formatPeso(resumenMes.deudaTotal)}
-                        colorVal="text-amber-600"
-                        border="border-amber-100" />
+                        border={balance >= 0 ? "border-emerald-100" : "border-red-100"}
+                        sub="Cobrado - Gastos" />
+                </div>
+
+                {/* Deuda total separada — siempre visible */}
+                <div className="bg-white border border-amber-200 rounded-2xl shadow-sm px-4 py-4 mb-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Deuda total por cobrar</p>
+                        <p className="text-2xl font-extrabold text-amber-600 mt-1">{formatPeso(resumenMes.deudaTotal)}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Saldo vivo acumulado de todos los clientes</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} className="w-6 h-6 stroke-amber-600">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v1m0 10v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                        </svg>
+                    </div>
                 </div>
 
                 {/* Evolución de ingresos */}
