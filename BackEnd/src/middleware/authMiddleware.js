@@ -20,6 +20,17 @@ export const proteger = async (req, res, next) => {
 
         next();
     } catch {
-        res.status(401).json({ message: "Token inválido o expirado." });
+        res.status(401).json({ message: "Token invalido o expirado." });
     }
+};
+
+/**
+ * Middleware de autorización: solo usuarios con rol 'admin'.
+ * Debe usarse DESPUÉS de proteger.
+ */
+export const soloAdmin = (req, res, next) => {
+    if (req.usuario?.rol !== "admin") {
+        return res.status(403).json({ message: "Acceso restringido a administradores." });
+    }
+    next();
 };

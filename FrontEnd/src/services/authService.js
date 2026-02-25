@@ -7,8 +7,8 @@ export const loginService = (email, password) => {
 };
 
 // POST /api/auth/registrar
-export const registrarService = (nombre, email, password, rol) => {
+export const registrarService = (nombre, email, password, registrationKey) => {
     console.log("[AUTH] Conectando a:", `${api.defaults.baseURL}/auth/registrar`);
-    return api.post("/auth/registrar", { nombre, email, password, rol });
+    return api.post("/auth/registrar", { nombre, email, password, registrationKey });
 };
 

@@ -44,6 +44,13 @@ const IconStats = ({ cls }) => (
     </svg>
 );
 
+const IconConfig = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+);
+
 const NAV_LINKS = [
     { to: "/clientes",     label: "Clientes",     Icon: IconClientes  },
     { to: "/ventas",       label: "Ventas",       Icon: IconVentas    },
@@ -59,6 +66,17 @@ const Navbar = () => {
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
 
+    const isAdmin   = usuario?.rol === "admin";
+    const navLinks  = [
+        { to: "/clientes",      label: "Clientes",    Icon: IconClientes  },
+        { to: "/ventas",        label: "Ventas",      Icon: IconVentas    },
+        { to: "/planilla",      label: "Planilla",    Icon: IconPlanilla  },
+        { to: "/llenados",      label: "Llenados",    Icon: IconLlenados  },
+        { to: "/gastos",        label: "Gastos",      Icon: IconGastos    },
+        { to: "/estadisticas",  label: "Stats",       Icon: IconStats     },
+        ...(isAdmin ? [{ to: "/configuracion", label: "Config", Icon: IconConfig }] : []),
+    ];
+
     const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
 
     return (
@@ -72,7 +90,7 @@ const Navbar = () => {
 
                     {/* Desktop links */}
                     <ul className="hidden sm:flex gap-1">
-                        {NAV_LINKS.map(({ to, label }) => (
+                        {navLinks.map(({ to, label }) => (
                             <li key={to}>
                                 <Link to={to} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                     pathname === to
@@ -120,7 +138,7 @@ const Navbar = () => {
 
             {/* ── BOTTOM TAB BAR (solo mobile) ───────────────────────── */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-700 flex">
-                {NAV_LINKS.map((navItem) => {
+                {navLinks.map((navItem) => {
                     const active  = pathname === navItem.to;
                     const NavIcon = navItem.Icon;
                     return (

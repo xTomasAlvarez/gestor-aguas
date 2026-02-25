@@ -10,6 +10,7 @@ import PlanillaPage      from "./pages/PlanillaPage";
 import LlenadosPage      from "./pages/LlenadosPage";
 import GastosPage        from "./pages/GastosPage";
 import DashboardPage     from "./pages/DashboardPage";
+import ConfigPage        from "./pages/ConfigPage";
 
 // Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página
 const Privada = ({ children }) => (
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/llenados"     element={<Privada><LlenadosPage /></Privada>} />
                 <Route path="/gastos"       element={<Privada><GastosPage /></Privada>} />
                 <Route path="/estadisticas" element={<Privada><DashboardPage /></Privada>} />
+                <Route path="/configuracion" element={<Privada><ConfigPage /></Privada>} />
             </Routes>
         </BrowserRouter>
     </AuthProvider>

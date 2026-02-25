@@ -12,6 +12,7 @@ import ventasRoutes   from "./src/routes/ventasRoutes.js";
 import gastosRoutes   from "./src/routes/gastosRoutes.js";
 import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
 import statsRoutes    from "./src/routes/statsRoutes.js";
+import adminRoutes    from "./src/routes/adminRoutes.js";
 
 // ── Variables de entorno ───────────────────────────────────────────────────
 const PORT   = process.env.PORT   || 3005;
@@ -38,6 +39,7 @@ app.use("/api/ventas",   ventasRoutes);
 app.use("/api/gastos",    gastosRoutes);
 app.use("/api/llenados",  llenadoRoutes);
 app.use("/api/stats",     statsRoutes);
+app.use("/api/admin",     adminRoutes);
 
 // ── Arranque del servidor ──────────────────────────────────────────────────
 app.listen(PORT, () => {
