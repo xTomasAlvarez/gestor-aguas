@@ -11,6 +11,7 @@ import clientesRoutes from "./src/routes/clientesRoutes.js";
 import ventasRoutes   from "./src/routes/ventasRoutes.js";
 import gastosRoutes   from "./src/routes/gastosRoutes.js";
 import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
+import statsRoutes    from "./src/routes/statsRoutes.js";
 
 // ── Variables de entorno (con valores por defecto seguros) ─────────────────
 const {
@@ -37,6 +38,7 @@ app.use("/api/clientes", clientesRoutes);
 app.use("/api/ventas",   ventasRoutes);
 app.use("/api/gastos",    gastosRoutes);
 app.use("/api/llenados",  llenadoRoutes);
+app.use("/api/stats",     statsRoutes);
 
 // ── Arranque del servidor ──────────────────────────────────────────────────
 app.listen(PORT, HOST, () => {

@@ -37,12 +37,20 @@ const IconGastos = ({ cls }) => (
     </svg>
 );
 
+const IconStats = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16l4-4 4 4 4-6" />
+    </svg>
+);
+
 const NAV_LINKS = [
-    { to: "/clientes", label: "Clientes",  Icon: IconClientes  },
-    { to: "/ventas",   label: "Ventas",    Icon: IconVentas    },
-    { to: "/planilla", label: "Planilla",  Icon: IconPlanilla  },
-    { to: "/llenados", label: "Llenados",  Icon: IconLlenados  },
-    { to: "/gastos",   label: "Gastos",    Icon: IconGastos    },
+    { to: "/clientes",     label: "Clientes",     Icon: IconClientes  },
+    { to: "/ventas",       label: "Ventas",       Icon: IconVentas    },
+    { to: "/planilla",     label: "Planilla",     Icon: IconPlanilla  },
+    { to: "/llenados",     label: "Llenados",     Icon: IconLlenados  },
+    { to: "/gastos",       label: "Gastos",       Icon: IconGastos    },
+    { to: "/estadisticas", label: "Stats",        Icon: IconStats     },
 ];
 
 const Navbar = () => {
@@ -112,17 +120,18 @@ const Navbar = () => {
 
             {/* ── BOTTOM TAB BAR (solo mobile) ───────────────────────── */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-700 flex">
-                {NAV_LINKS.map(({ to, label, Icon }) => {
-                    const active = pathname === to;
+                {NAV_LINKS.map((navItem) => {
+                    const active  = pathname === navItem.to;
+                    const NavIcon = navItem.Icon;
                     return (
-                        <Link key={to} to={to}
+                        <Link key={navItem.to} to={navItem.to}
                             className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors ${
                                 active ? "text-blue-400" : "text-slate-500 active:text-slate-300"
                             }`}
                         >
-                            <Icon cls={`w-5 h-5 stroke-current`} />
+                            <NavIcon cls="w-5 h-5 stroke-current" />
                             <span className={`text-[10px] font-semibold leading-none ${active ? "text-blue-400" : "text-slate-500"}`}>
-                                {label}
+                                {navItem.label}
                             </span>
                             {active && <span className="absolute bottom-0 w-8 h-0.5 bg-blue-500 rounded-t-full" />}
                         </Link>
