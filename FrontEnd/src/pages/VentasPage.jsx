@@ -87,26 +87,37 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                 </div>
             </div>
 
-            <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Productos</p>
+    <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Productos</p>
                 <div className="flex flex-col gap-2">
-                    {PRODUCTOS.map(({ key, label }) => (
-                        <div key={key} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center bg-slate-50 rounded-xl px-4 py-3">
-                            <span className="text-sm font-medium text-slate-700">{label}</span>
-                            <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-[10px] text-slate-400">Cantidad</span>
-                                <input type="number" min="0" value={form.productos[key].cantidad}
-                                    onChange={(e) => setProd(key, "cantidad", e.target.value)}
-                                    className="w-20 text-center px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    {PRODUCTOS.map(({ key, label }) => {
+                        const cant = Number(form.productos[key].cantidad);
+                        return (
+                        <div key={key} className="bg-slate-50 rounded-xl px-4 py-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-slate-700">{label}</span>
+                                <div className="flex items-center gap-1">
+                                    <button type="button"
+                                        onClick={() => setProd(key, "cantidad", Math.max(0, cant - 1))}
+                                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-200 active:bg-slate-300 text-slate-700 text-xl font-bold touch-manipulation select-none">−</button>
+                                    <span className="w-8 text-center text-lg font-extrabold text-slate-900 tabular-nums">{cant}</span>
+                                    <button type="button"
+                                        onClick={() => setProd(key, "cantidad", cant + 1)}
+                                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-700 active:bg-blue-800 text-white text-xl font-bold touch-manipulation select-none">+</button>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-[10px] text-slate-400">Precio unit.</span>
-                                <input type="number" min="0" value={form.productos[key].precio_unitario}
-                                    onChange={(e) => setProd(key, "precio_unitario", e.target.value)}
-                                    className="w-24 text-center px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-                            </div>
+                            {cant > 0 && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <span className="text-xs text-slate-400">Precio unit.</span>
+                                    <input type="number" inputMode="numeric" min="0" value={form.productos[key].precio_unitario}
+                                        onChange={(e) => setProd(key, "precio_unitario", e.target.value)}
+                                        className="w-28 text-center px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                                    <span className="text-xs text-slate-500">= {formatPeso(cant * Number(form.productos[key].precio_unitario))}</span>
+                                </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -236,13 +247,21 @@ const VentasPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
-            <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div className="max-w-4xl mx-auto mb-6 flex items-end justify-between sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-800">Ventas</h1>
                     <p className="text-sm text-slate-500 mt-1">Registro y control de entregas.</p>
                 </div>
-                <button onClick={() => setModalCrear(true)} className={btnPrimary}>+ Nueva venta</button>
+                {/* Boton desktop — en mobile se usa el FAB flotante */}
+                <button onClick={() => setModalCrear(true)} className={`hidden sm:block ${btnPrimary}`}>+ Nueva venta</button>
             </div>
+
+            {/* FAB flotante solo en mobile (encima del bottom nav) */}
+            <button
+                onClick={() => setModalCrear(true)}
+                className="sm:hidden fixed bottom-[4.5rem] right-4 z-30 w-14 h-14 rounded-full bg-blue-700 active:bg-blue-800 shadow-lg flex items-center justify-center text-white text-3xl font-bold touch-manipulation select-none"
+                aria-label="Nueva venta"
+            >+</button>
 
             <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 {[

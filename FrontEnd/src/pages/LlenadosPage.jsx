@@ -29,6 +29,26 @@ const formToPayload = ({ cantidades, costo_total }) => ({
 // ── Formulario ────────────────────────────────────────────────────────────
 const FORM_VACIO = { cantidades: { ...CANT_VACIO }, costo_total: "" };
 
+// Stepper táctil: fila con label a la izq y controles a la der
+const Stepper = ({ label, value, onChange }) => (
+    <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-4 py-3 sm:flex-col sm:items-center sm:py-4">
+        <span className="text-sm font-bold text-slate-700 sm:text-xs sm:uppercase sm:tracking-wider sm:mb-2">{label}</span>
+        <div className="flex items-center gap-1">
+            <button
+                type="button"
+                onClick={() => onChange(Math.max(0, Number(value) - 1))}
+                className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 text-2xl font-bold transition-colors touch-manipulation select-none"
+            >−</button>
+            <span className="w-10 text-center text-2xl font-extrabold text-slate-900 tabular-nums">{value}</span>
+            <button
+                type="button"
+                onClick={() => onChange(Number(value) + 1)}
+                className="w-11 h-11 flex items-center justify-center rounded-xl bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white text-2xl font-bold transition-colors touch-manipulation select-none"
+            >+</button>
+        </div>
+    </div>
+);
+
 const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form, setForm]         = useState(inicial);
     const [enviando, setEnviando] = useState(false);
@@ -50,21 +70,20 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Unidades cargadas</p>
-                <div className="grid grid-cols-3 gap-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Unidades a cargar</p>
+                {/* Mobile: 1 columna full con steppers en fila. sm+: 3 columnas */}
+                <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
                     {PRODUCTOS.map(({ key, label }) => (
-                        <div key={key} className="flex flex-col items-center gap-2 bg-slate-50 rounded-xl px-3 py-4">
-                            <span className="text-xs font-semibold text-slate-600 text-center">{label}</span>
-                            <input type="number" min="0" value={form.cantidades[key]}
-                                onChange={(e) => setCantidad(key, e.target.value)}
-                                className="w-full text-center px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 font-bold text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                        </div>
+                        <Stepper key={key} label={label}
+                            value={form.cantidades[key]}
+                            onChange={(v) => setCantidad(key, v)} />
                     ))}
                 </div>
             </div>
+
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo total (opcional)</label>
-                <input type="number" min="0" value={form.costo_total}
+                <input type="number" inputMode="numeric" min="0" value={form.costo_total}
                     onChange={(e) => setForm((p) => ({ ...p, costo_total: e.target.value }))}
                     placeholder="Ej: 45000" className={`${inputCls} sm:w-48`} />
             </div>
@@ -78,6 +97,7 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
         </form>
     );
 };
+
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const LlenadoFila = ({ llenado, onEditar, onEliminar }) => (

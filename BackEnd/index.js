@@ -6,6 +6,7 @@ import morgan from "morgan";
 
 // ── Importaciones internas ─────────────────────────────────────────────────
 import { dbConect } from "./src/config/dbConect.js";
+import authRoutes    from "./src/routes/authRoutes.js";
 import clientesRoutes from "./src/routes/clientesRoutes.js";
 import ventasRoutes   from "./src/routes/ventasRoutes.js";
 import gastosRoutes   from "./src/routes/gastosRoutes.js";
@@ -31,6 +32,7 @@ app.use(cors());
 dbConect(DB_URI);
 
 // ── Rutas de la API ────────────────────────────────────────────────────────
+app.use("/api/auth",     authRoutes);      // pública
 app.use("/api/clientes", clientesRoutes);
 app.use("/api/ventas",   ventasRoutes);
 app.use("/api/gastos",    gastosRoutes);

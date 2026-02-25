@@ -6,18 +6,15 @@ import {
     actualizarLlenado,
     eliminarLlenado,
 } from "../controllers/llenadoController.js";
+import { proteger } from "../middleware/authMiddleware.js";
 
 const router = Router();
+router.use(proteger);
 
-// GET  /api/llenados      → Listar todos los llenados
-// POST /api/llenados      → Registrar un llenado
 router.route("/")
     .get(obtenerLlenados)
     .post(crearLlenado);
 
-// GET    /api/llenados/:id  → Obtener un llenado por ID
-// PUT    /api/llenados/:id  → Actualizar un llenado
-// DELETE /api/llenados/:id  → Eliminar un llenado
 router.route("/:id")
     .get(obtenerLlenadoPorId)
     .put(actualizarLlenado)
