@@ -50,3 +50,34 @@ export const getAvailableYears = () => {
     const y = new Date().getFullYear();
     return [y - 1, y, y + 1];
 };
+
+// ── Filtrar por rango temporal (hoy / semana / mes) ───────────────────────
+export const filtrarPorTiempo = (items, filtro, campo = "fecha") => {
+    const ahora    = new Date();
+    const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+    let desde;
+    if (filtro === "hoy") {
+        desde = inicioDia;
+    } else if (filtro === "semana") {
+        // Lunes como inicio de semana
+        const dow = ahora.getDay(); // 0=dom, 1=lun, ...
+        const diasDesLunes = dow === 0 ? 6 : dow - 1;
+        desde = new Date(inicioDia);
+        desde.setDate(inicioDia.getDate() - diasDesLunes);
+    } else if (filtro === "mes") {
+        desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    } else {
+        return items;
+    }
+
+    return items.filter((item) => new Date(item[campo]) >= desde);
+};
+
+// ── Labels de filtro ──────────────────────────────────────────────────────
+export const FILTRO_CONFIG = [
+    { value: "hoy",    label: "Hoy",          labelCorto: "del dia"      },
+    { value: "semana", label: "Esta semana",   labelCorto: "de la semana" },
+    { value: "mes",    label: "Este mes",      labelCorto: "del mes"      },
+];
+

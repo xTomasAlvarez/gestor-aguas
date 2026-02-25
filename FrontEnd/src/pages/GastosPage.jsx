@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { obtenerGastos, crearGasto, actualizarGasto, eliminarGasto } from "../services/gastosService";
 import Modal from "../components/Modal";
-import { MESES, formatFecha, formatPeso, filterByMonth, groupByDay, getAvailableYears, formatFechaDia } from "../utils/format";
+import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
 
-const inputCls   = "w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white";
-const btnPrimary = "px-5 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors";
+const inputCls     = "w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white";
+const btnPrimary   = "px-5 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors";
 const btnSecondary = "px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-700 border border-slate-200 rounded-xl hover:border-blue-400 transition-colors";
-const btnDanger  = "px-4 py-2 text-sm font-medium text-red-500 hover:text-red-700 border border-slate-200 rounded-xl hover:border-red-300 transition-colors";
 
 // ── Formulario crear/editar ────────────────────────────────────────────────
 const FORM_VACIO = { concepto: "", monto: "" };
@@ -53,22 +52,27 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
     );
 };
 
-// ── Selector de mes/año ───────────────────────────────────────────────────
-const MonthSelector = ({ month, year, onMonth, onYear }) => (
-    <div className="flex gap-2">
-        <select value={month} onChange={(e) => onMonth(Number(e.target.value))}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-        </select>
-        <select value={year} onChange={(e) => onYear(Number(e.target.value))}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            {getAvailableYears().map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+// ── Botones de filtro de tiempo ───────────────────────────────────────────
+const FiltroTiempo = ({ valor, onChange }) => (
+    <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        {FILTRO_CONFIG.map(({ value, label }) => (
+            <button
+                key={value}
+                onClick={() => onChange(value)}
+                className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                    valor === value
+                        ? "bg-white text-blue-700 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                }`}
+            >
+                {label}
+            </button>
+        ))}
     </div>
 );
 
 // ── Accordion de días ─────────────────────────────────────────────────────
-const GastosFila = ({ gasto, onEditar, onEliminar }) => (
+const GastoFila = ({ gasto, onEditar, onEliminar }) => (
     <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
         <div>
             <p className="text-sm font-semibold text-slate-800">{gasto.concepto}</p>
@@ -101,7 +105,7 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
             </button>
             {expanded && (
                 <div className="px-5 pb-3 border-t border-slate-100">
-                    {items.map((g) => <GastosFila key={g._id} gasto={g} onEditar={onEditar} onEliminar={onEliminar} />)}
+                    {items.map((g) => <GastoFila key={g._id} gasto={g} onEditar={onEditar} onEliminar={onEliminar} />)}
                 </div>
             )}
         </div>
@@ -110,14 +114,12 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
 
 // ── Página principal ──────────────────────────────────────────────────────
 const GastosPage = () => {
-    const now = new Date();
-    const [gastos,   setGastos]   = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [error,    setError]    = useState(null);
-    const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-    const [selectedYear,  setSelectedYear]  = useState(now.getFullYear());
-    const [expanded,  setExpanded]  = useState(new Set());
-    const [editando,  setEditando]  = useState(null);
+    const [gastos,       setGastos]       = useState([]);
+    const [cargando,     setCargando]     = useState(true);
+    const [error,        setError]        = useState(null);
+    const [filtroTiempo, setFiltroTiempo] = useState("hoy");
+    const [expanded,     setExpanded]     = useState(new Set());
+    const [editando,     setEditando]     = useState(null);
 
     const cargarGastos = async () => {
         try { setCargando(true); const { data } = await obtenerGastos(); setGastos(data); }
@@ -126,6 +128,9 @@ const GastosPage = () => {
     };
 
     useEffect(() => { cargarGastos(); }, []);
+
+    // Reset expansión al cambiar filtro
+    const handleFiltro = (valor) => { setFiltroTiempo(valor); setExpanded(new Set()); };
 
     const toggleDia = (key) => setExpanded((prev) => {
         const next = new Set(prev);
@@ -150,11 +155,11 @@ const GastosPage = () => {
         setGastos((p) => p.filter((g) => g._id !== id));
     };
 
-    // Filtrado y agrupacion
-    const filtrados  = filterByMonth(gastos, selectedMonth, selectedYear);
-    const porDia     = groupByDay(filtrados);
-    const dias       = Object.keys(porDia).sort().reverse();
-    const totalMes   = filtrados.reduce((acc, g) => acc + g.monto, 0);
+    const filtrados = filtrarPorTiempo(gastos, filtroTiempo);
+    const porDia    = groupByDay(filtrados);
+    const dias      = Object.keys(porDia).sort().reverse();
+    const totalPeriodo = filtrados.reduce((acc, g) => acc + g.monto, 0);
+    const labelCorto   = FILTRO_CONFIG.find((f) => f.value === filtroTiempo)?.labelCorto || "";
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
@@ -164,31 +169,32 @@ const GastosPage = () => {
                     <p className="text-sm text-slate-500 mt-1">Registro de gastos operativos.</p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm text-right">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Total del mes</p>
-                    <p className="text-xl font-extrabold text-slate-800">{formatPeso(totalMes)}</p>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">Total {labelCorto}</p>
+                    <p className="text-xl font-extrabold text-slate-800">{formatPeso(totalPeriodo)}</p>
                 </div>
             </div>
 
-            {/* Formulario de creacion */}
+            {/* Formulario */}
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Nuevo gasto</h2>
                 <FormGasto onGuardar={handleCrear} />
             </div>
 
-            {/* Selector de mes */}
+            {/* Filtros + historial */}
             <div className="max-w-3xl mx-auto flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-slate-700">
                     Historial
                     <span className="ml-2 text-sm font-normal text-slate-400">({filtrados.length} registros)</span>
                 </h2>
-                <MonthSelector month={selectedMonth} year={selectedYear} onMonth={setSelectedMonth} onYear={setSelectedYear} />
+                <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
 
-            {/* Accordion */}
             <div className="max-w-3xl mx-auto flex flex-col gap-2">
                 {cargando && <p className="text-center py-16 text-slate-400">Cargando...</p>}
                 {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
-                {!cargando && !error && dias.length === 0 && <p className="text-center py-16 text-slate-400">Sin registros para este mes.</p>}
+                {!cargando && !error && dias.length === 0 && (
+                    <p className="text-center py-16 text-slate-400">Sin registros para este periodo.</p>
+                )}
                 {!cargando && !error && dias.map((dk) => (
                     <AccordionDia
                         key={dk} diaKey={dk} items={porDia[dk]}
@@ -198,7 +204,6 @@ const GastosPage = () => {
                 ))}
             </div>
 
-            {/* Modal de edicion */}
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar gasto">
                 {editando && (
                     <FormGasto
