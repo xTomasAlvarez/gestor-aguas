@@ -1,69 +1,103 @@
 import Cliente from "../models/Cliente.js";
 
+// ── POST /api/clientes ─────────────────────────────────────────────────────
+// Regla: Bloquear si ya existe el mismo teléfono o la misma combinación nombre+dirección
 export const crearCliente = async (req, res) => {
     try {
-        const { nombre, direccion, telefono, localidad } = req.body;
+        const { nombre, direccion, telefono } = req.body;
 
-        // --- VALIDACIÓN 1: TELÉFONO REPETIDO ---
-        // Solo verificamos si el campo telefono tiene contenido
-        if (telefono) {
-            const telefonoRepetido = await Cliente.findOne({ telefono: telefono });
-            
-            if (telefonoRepetido) {
-                return res.status(400).json({ 
-                    message: `El teléfono ${telefono} ya pertenece al cliente '${telefonoRepetido.nombre}'. Verificalo.` 
-                });
-            }
-        }
+        // Construimos la query de búsqueda de duplicados
+        const condicionesDuplicado = [{ nombre, direccion }];
+        if (telefono) condicionesDuplicado.push({ telefono });
 
-        // --- VALIDACIÓN 2: NOMBRE + DIRECCIÓN REPETIDOS ---
-        const clienteRepetido = await Cliente.findOne({ 
-            nombre: nombre, 
-            direccion: direccion 
+        const clienteExistente = await Cliente.findOne({
+            $or: condicionesDuplicado,
         });
 
-        if (clienteRepetido) {
-            return res.status(400).json({ 
-                message: `Ya existe un cliente llamado '${nombre}' en la dirección '${direccion}'` 
+        if (clienteExistente) {
+            return res.status(400).json({
+                message: "Ya existe un cliente con ese teléfono o con la misma combinación de nombre y dirección.",
             });
         }
 
-        // --- CREACIÓN ---
         const nuevoCliente = await Cliente.create(req.body);
-
-        res.status(201).json({
-            message: "Cliente creado exitosamente",
-            cliente: nuevoCliente
-        });
-
-    } catch (err) {
-        console.error("❌ Error en crearCliente:", err);
-        res.status(500).json({ message: "Hubo un error en la creación del cliente" });
-    }
-}
-
-export const obtenerClientes = async (req, res) => {
-    try {
-        const { nombre, direccion, localidad, activo } = req.query;
-
-        // Construcción dinámica con ternarios
-        nombre ? filter.nombre = { $regex: nombre, $options: "i" } : null;
-        direccion ? filter.direccion = { $regex: direccion, $options: "i" } : null;
-        localidad ? filter.localidad = { $regex: localidad, $options: "i" } : null;
-        filter.activo = true === "false" ? false : true;
-
-        const clientes = await Cliente
-            .find(filter)
-            .sort({ nombre: 1 });
-
-        res.status(200).json(clientes);
-
-    } catch (err) {
-        console.error("❌ Error en obtenerClientes:", err);
-        res.status(500).json({ message: "Error al obtener clientes", error: err.message });
+        res.status(201).json(nuevoCliente);
+    } catch (error) {
+        res.status(500).json({ message: "Error al crear el cliente.", error: error.message });
     }
 };
 
-export const obtenerClienteById = (req, res) =>{
-    
-}
+// ── GET /api/clientes ──────────────────────────────────────────────────────
+// Regla: Siempre filtrar por { activo: true }. Permite ?nombre= para buscar por nombre (regex)
+export const obtenerClientes = async (req, res) => {
+    try {
+        const { nombre } = req.query;
+        const filtro = { activo: true };
+
+        if (nombre) {
+            filtro.nombre = { $regex: nombre, $options: "i" }; // Case-insensitive
+        }
+
+        const clientes = await Cliente.find(filtro).sort({ nombre: 1 });
+        res.status(200).json(clientes);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener los clientes.", error: error.message });
+    }
+};
+
+// ── GET /api/clientes/:id ──────────────────────────────────────────────────
+export const obtenerClientePorId = async (req, res) => {
+    try {
+        const cliente = await Cliente.findById(req.params.id);
+
+        if (!cliente) {
+            return res.status(404).json({ message: "Cliente no encontrado." });
+        }
+
+        res.status(200).json(cliente);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener el cliente.", error: error.message });
+    }
+};
+
+// ── PUT /api/clientes/:id ──────────────────────────────────────────────────
+export const actualizarCliente = async (req, res) => {
+    try {
+        const clienteActualizado = await Cliente.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (!clienteActualizado) {
+            return res.status(404).json({ message: "Cliente no encontrado." });
+        }
+
+        res.status(200).json(clienteActualizado);
+    } catch (error) {
+        res.status(500).json({ message: "Error al actualizar el cliente.", error: error.message });
+    }
+};
+
+// ── DELETE /api/clientes/:id ───────────────────────────────────────────────
+// Regla SOFT DELETE: cambia 'activo' a false en lugar de eliminar el documento
+export const eliminarCliente = async (req, res) => {
+    try {
+        const clienteDesactivado = await Cliente.findByIdAndUpdate(
+            req.params.id,
+            { activo: false },
+            { new: true }
+        );
+
+        if (!clienteDesactivado) {
+            return res.status(404).json({ message: "Cliente no encontrado." });
+        }
+
+        res.status(200).json({
+            message: "Cliente desactivado correctamente.",
+            cliente: clienteDesactivado,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error al desactivar el cliente.", error: error.message });
+    }
+};

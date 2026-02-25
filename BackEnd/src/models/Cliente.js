@@ -1,48 +1,69 @@
-import { Model, Schema } from "mongoose";
+import mongoose from "mongoose";
 
-import mongoose from 'mongoose';
+const { Schema, model } = mongoose;
 
-const ClienteSchema = new Schema({
-    nombre: {
-        type: String,
-        required: true,
-        trim: true
+// ── Sub-schema: Deuda (envases físicos que debe el cliente) ────────────────
+const deudaSchema = new Schema(
+    {
+        bidones_20L: { type: Number, default: 0 },
+        bidones_12L: { type: Number, default: 0 },
+        sodas:       { type: Number, default: 0 },
     },
-    // Dirección opcional porque a veces el nombre ya es la dirección
-    direccion: {
-        type: String,
-        required: false
-    },
-    localidad: {
-        type: String,
-        required: true
-    },
-    telefono: {
-        type: String,
-        required: false,
-        trim: true
-    },
-    deuda: {
-        bidones_20L: { 
-            type: Number, 
-            default: 0 // Arranca debiendo 0
+    { _id: false } // No necesita _id propio al ser un subdocumento
+);
+
+// ── Schema principal: Cliente ──────────────────────────────────────────────
+const clienteSchema = new Schema(
+    {
+        nombre: {
+            type:     String,
+            required: [true, "El nombre del cliente es obligatorio."],
+            trim:     true,
         },
-        bidones_12L: { 
-            type: Number, 
-            default: 0 
+        direccion: {
+            type:    String,
+            trim:    true,
+            default: null,
         },
-        sodas: { 
-            type: Number, 
-            default: 0 
-        }
+        telefono: {
+            type:    String,
+            trim:    true,
+            default: null,
+        },
+        deuda: {
+            type:    deudaSchema,
+            default: () => ({}), // Inicializa con todos los campos en 0
+        },
+        activo: {
+            type:    Boolean,
+            default: true,
+        },
     },
-    activo: {
-        type: Boolean,
-        default: true // Por si tu papá quiere "borrar" un cliente sin perder el historial, solo lo desactiva.
+    {
+        timestamps: true, // Agrega createdAt y updatedAt automáticamente
+        versionKey: false,
     }
-}, {
-    timestamps: true // Esto crea automáticamente campos: createdAt y updatedAt. ¡Muy útil!
-});
+);
 
-// Exportamos el modelo para usarlo en los controladores
-export default mongoose.model('Cliente', ClienteSchema);
+// ── Índice compuesto para anti-duplicados (nombre + dirección) ─────────────
+// Permite null en direccion, solo bloquea duplicados cuando AMBOS coinciden
+clienteSchema.index(
+    { nombre: 1, direccion: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { direccion: { $type: "string" } },
+    }
+);
+
+// ── Índice único para teléfono (solo cuando se provee) ────────────────────
+clienteSchema.index(
+    { telefono: 1 },
+    {
+        unique: true,
+        sparse: true, // Ignora documentos donde telefono es null/undefined
+    }
+);
+
+const Cliente = model("Cliente", clienteSchema);
+
+export default Cliente;

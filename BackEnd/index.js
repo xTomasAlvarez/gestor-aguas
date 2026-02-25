@@ -1,43 +1,42 @@
-//Dependencias
-import mongoose from "mongoose";
-import { configDotenv } from 'dotenv';
-import cors from "cors";
+// ── Dependencias externas ──────────────────────────────────────────────────
+import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import morgan from "morgan";
-//Importaciones
-import { dbConect } from "../BackEnd/src/config/dbConect.js";
-import ventasRoutes from "../BackEnd/src/routes/ventasRoutes.js"
-import clientesRoutes from "../BackEnd/src/routes/clientesRoutes.js"
-import gastosRoutes from "../BackEnd/src/routes/gastosRoutes.js"
-import llenadoRoutes from "../BackEnd/src/routes/llenadoRoutes.js"
 
+// ── Importaciones internas ─────────────────────────────────────────────────
+import { dbConect } from "./src/config/dbConect.js";
+import clientesRoutes from "./src/routes/clientesRoutes.js";
+// import ventasRoutes   from "./src/routes/ventasRoutes.js";
+// import gastosRoutes   from "./src/routes/gastosRoutes.js";
+// import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
 
-//Permite cargar las variables del .envv
-configDotenv()
-
-//Traemos los valores del .env y ponemos valores default por si fallan los otros
+// ── Variables de entorno (con valores por defecto seguros) ─────────────────
 const {
-    PORT = 3006,
-    HOST = "localhost",
-    DB_URI = "mongodb://localhost:27017/repartocluster"
+    PROTOCOL = "http",
+    HOST     = "localhost",
+    PORT     = 3005,
+    DB_URI   = "mongodb://localhost:27017/reparto_db",
 } = process.env;
 
-//Callback default para que se ejecute luego de levantarse el servidor
-const backLog = () => console.log(`Servidor escuchando en http://${HOST}:${PORT}, con MongoDB en ${DB_URI}`);
+// ── Inicialización de Express ──────────────────────────────────────────────
+const app = express();
 
-const app = express()
+// ── Middlewares globales ───────────────────────────────────────────────────
+app.use(express.json());
+app.use(morgan("dev"));
+app.use(cors());
 
-app.use(express.json()) //Dependencia para que maneje json
-app.use(morgan("dev")) //Dependencia que maneja logs
-app.use(cors()) // Dependencia para poder conectar con Front sin bloqueos
+// ── Conexión a la Base de Datos ────────────────────────────────────────────
+dbConect(DB_URI);
 
-dbConect(DB_URI); //Conexion a base de datos
+// ── Rutas de la API ────────────────────────────────────────────────────────
+app.use("/api/clientes", clientesRoutes);
+// app.use("/api/ventas",   ventasRoutes);
+// app.use("/api/gastos",   gastosRoutes);
+// app.use("/api/llenado",  llenadoRoutes);
 
-//Direccionamiento a EndPoints
-
-app.use("/api/ventas", ventasRoutes);
-// app.use("/api/clientes", clientesRoutes);
-// app.use("/api/llenado", llenadoRoutes);
-// app.use("/api/gastos", gastosRoutes);
-
-app.listen(PORT, HOST, backLog) //Levantamos el servidor
+// ── Arranque del servidor ──────────────────────────────────────────────────
+app.listen(PORT, HOST, () => {
+    console.log(`🚀 Servidor corriendo en ${PROTOCOL}://${HOST}:${PORT}`);
+});
