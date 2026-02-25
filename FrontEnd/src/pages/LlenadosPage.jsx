@@ -4,14 +4,11 @@ import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
+import { PRODUCTOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
-const PRODUCTOS = [
-    { key: "Bidon 20L", label: "Bidon 20L" },
-    { key: "Bidon 12L", label: "Bidon 12L" },
-    { key: "Soda",      label: "Soda"      },
-];
-const CANT_VACIO = { "Bidon 20L": 0, "Bidon 12L": 0, "Soda": 0 };
+const CANT_VACIO = Object.fromEntries(PRODUCTOS.map((p) => [p.key, 0]));
+
 
 // Conversores form ↔ modelo
 const llenadoToForm = (l) => {
@@ -94,7 +91,7 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
             </div>
 
             <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo total (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo total</label>
                 <input type="number" inputMode="numeric" min="0" value={form.costo_total}
                     onChange={(e) => setForm((p) => ({ ...p, costo_total: e.target.value }))}
                     placeholder="Ej: 45000" className={`${inputCls} sm:w-48`} />

@@ -5,24 +5,10 @@ import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
+import { PRODUCTOS, PROD_VACIO, METODOS_PAGO as METODOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 // ── Constantes ────────────────────────────────────────────────────────────
-const PRODUCTOS = [
-    { key: "Bidon 20L", label: "Bidon 20L", precioDefault: 2500 },
-    { key: "Bidon 12L", label: "Bidon 12L", precioDefault: 1800 },
-    { key: "Soda",      label: "Soda",      precioDefault: 900  },
-];
-const METODOS = [
-    { value: "efectivo",      label: "Efectivo"      },
-    { value: "fiado",         label: "Fiado"          },
-    { value: "transferencia", label: "Transferencia"  },
-];
-const PROD_VACIO = {
-    "Bidon 20L": { cantidad: 0, precio_unitario: 2500 },
-    "Bidon 12L": { cantidad: 0, precio_unitario: 1800 },
-    "Soda":      { cantidad: 0, precio_unitario: 900  },
-};
 const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "", esCobranza: false };
 
 // Helpers

@@ -13,13 +13,9 @@ import gastosRoutes   from "./src/routes/gastosRoutes.js";
 import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
 import statsRoutes    from "./src/routes/statsRoutes.js";
 
-// ── Variables de entorno (con valores por defecto seguros) ─────────────────
-const {
-    PROTOCOL = "http",
-    HOST     = "localhost",
-    PORT     = 3005,
-    DB_URI   = "mongodb://localhost:27017/reparto_db",
-} = process.env;
+// ── Variables de entorno ───────────────────────────────────────────────────
+const PORT   = process.env.PORT   || 3005;
+const DB_URI = process.env.DB_URI || "mongodb://localhost:27017/reparto_db";
 
 // ── Inicialización de Express ──────────────────────────────────────────────
 const app = express();
@@ -27,13 +23,16 @@ const app = express();
 // ── Middlewares globales ───────────────────────────────────────────────────
 app.use(express.json());
 app.use(morgan("dev"));
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || "*",   // en producción, poner la URL de Vercel
+    credentials: true,
+}));
 
 // ── Conexión a la Base de Datos ────────────────────────────────────────────
 dbConect(DB_URI);
 
 // ── Rutas de la API ────────────────────────────────────────────────────────
-app.use("/api/auth",     authRoutes);      // pública
+app.use("/api/auth",     authRoutes);
 app.use("/api/clientes", clientesRoutes);
 app.use("/api/ventas",   ventasRoutes);
 app.use("/api/gastos",    gastosRoutes);
@@ -41,6 +40,6 @@ app.use("/api/llenados",  llenadoRoutes);
 app.use("/api/stats",     statsRoutes);
 
 // ── Arranque del servidor ──────────────────────────────────────────────────
-app.listen(PORT, HOST, () => {
-    console.log(`🚀 Servidor corriendo en ${PROTOCOL}://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

@@ -1,24 +1,6 @@
 import Venta   from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-// Construye el $inc de envases (solo relevante para ventas fiado)
-const construirIncDeuda = (items, multiplicador = 1) => {
-    const inc = {};
-    for (const item of items) {
-        if (item.producto === "Bidon 20L") {
-            inc["deuda.bidones_20L"] = (inc["deuda.bidones_20L"] || 0) + item.cantidad * multiplicador;
-        } else if (item.producto === "Bidon 12L") {
-            inc["deuda.bidones_12L"] = (inc["deuda.bidones_12L"] || 0) + item.cantidad * multiplicador;
-        } else if (item.producto === "Soda") {
-            inc["deuda.sodas"] = (inc["deuda.sodas"] || 0) + item.cantidad * multiplicador;
-        }
-    }
-    return inc;
-};
-
-// Saldo monetario que queda pendiente tras el pago del cliente
-const saldoPendiente = (total, montoPagado) => Math.max(0, (total || 0) - (montoPagado || 0));
+import { construirIncDeuda, saldoPendiente } from "../helpers/deuda.js";
 
 // ── POST /api/ventas ───────────────────────────────────────────────────────
 // Dos escenarios posibles:

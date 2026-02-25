@@ -1,8 +1,8 @@
-import api from "./api.js";
+import { crearCrudService } from "./crudService.js";
 
-const BASE = "/gastos";
+const crud = crearCrudService("/gastos");
 
-export const obtenerGastos = ()        => api.get(BASE);
-export const crearGasto    = (datos)   => api.post(BASE, datos);
-export const eliminarGasto = (id)      => api.delete(`${BASE}/${id}`);
-export const actualizarGasto = (id, datos) => api.put(`${BASE}/${id}`, datos);
+export const obtenerGastos   = crud.obtener;
+export const crearGasto      = crud.crear;
+export const actualizarGasto = crud.actualizar;
+export const eliminarGasto   = crud.eliminar;

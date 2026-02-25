@@ -1,6 +1,5 @@
 import Venta   from "../models/Venta.js";
 import Gasto   from "../models/Gastos.js";
-import Cliente from "../models/Cliente.js";
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
