@@ -1,9 +1,14 @@
 import api from "./api";
 
 // POST /api/auth/login
-export const loginService = (email, password) =>
-    api.post("/auth/login", { email, password });
+export const loginService = (email, password) => {
+    console.log("[AUTH] Conectando a:", `${api.defaults.baseURL}/auth/login`);
+    return api.post("/auth/login", { email, password });
+};
 
 // POST /api/auth/registrar
-export const registrarService = (nombre, email, password, rol) =>
-    api.post("/auth/registrar", { nombre, email, password, rol });
+export const registrarService = (nombre, email, password, rol) => {
+    console.log("[AUTH] Conectando a:", `${api.defaults.baseURL}/auth/registrar`);
+    return api.post("/auth/registrar", { nombre, email, password, rol });
+};
+
