@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.png', 'pwa-512.png'],
       manifest: {
-        name: 'Gestor Aguas Trancas',
+        name: 'Gestor Aguas',
         short_name: 'Gestor Aguas',
         description: 'Gestión de reparto de agua',
         theme_color: '#1e3a5f',

@@ -68,7 +68,7 @@ const RegisterPage = () => {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-sm">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestion Reparto</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
                     <p className="text-sm text-slate-500 mt-2">Crea tu cuenta de acceso</p>
                 </div>
 
