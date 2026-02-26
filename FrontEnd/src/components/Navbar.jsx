@@ -51,6 +51,13 @@ const IconConfig = ({ cls }) => (
     </svg>
 );
 
+const IconBroadcast = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A9 9 0 0 0 21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 2.4 6.2L4 19h5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 12m-1 0a1 1 0 1 0 2 0 1 1 0 1 0-2 0" />
+    </svg>
+);
+
 const NAV_LINKS = [
     { to: "/clientes",     label: "Clientes",     Icon: IconClientes  },
     { to: "/ventas",       label: "Ventas",       Icon: IconVentas    },
@@ -74,7 +81,10 @@ const Navbar = () => {
         { to: "/llenados",      label: "Llenados",    Icon: IconLlenados  },
         { to: "/gastos",        label: "Gastos",      Icon: IconGastos    },
         { to: "/estadisticas",  label: "Stats",       Icon: IconStats     },
-        ...(isAdmin ? [{ to: "/configuracion", label: "Config", Icon: IconConfig }] : []),
+        ...(isAdmin ? [
+            { to: "/broadcast",    label: "Difusion",  Icon: IconBroadcast },
+            { to: "/configuracion", label: "Config",   Icon: IconConfig    },
+        ] : []),
     ];
 
     const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
