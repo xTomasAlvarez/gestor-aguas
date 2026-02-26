@@ -3,12 +3,15 @@ import Gasto from "../models/Gastos.js";
 // ── POST /api/gastos ───────────────────────────────────────────────────────
 export const crearGasto = async (req, res) => {
     try {
-        const nuevoGasto = await Gasto.create(req.body);
+        const payload = { ...req.body };
+        if (payload.fecha) payload.fecha = new Date(payload.fecha);
+        const nuevoGasto = await Gasto.create(payload);
         res.status(201).json(nuevoGasto);
     } catch (error) {
         res.status(500).json({ message: "Error al crear el gasto.", error: error.message });
     }
 };
+
 
 // ── GET /api/gastos ────────────────────────────────────────────────────────
 export const obtenerGastos = async (req, res) => {

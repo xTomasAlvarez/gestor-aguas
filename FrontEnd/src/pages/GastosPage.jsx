@@ -7,7 +7,8 @@ import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, 
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 // ── Formulario crear/editar ────────────────────────────────────────────────
-const FORM_VACIO = { concepto: "", monto: "" };
+const hoy = () => new Date().toISOString().slice(0, 10);
+const FORM_VACIO = { concepto: "", monto: "", fecha: hoy() };
 
 const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form, setForm]         = useState(inicial);
@@ -20,9 +21,10 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
         e.preventDefault();
         if (!form.concepto.trim()) return setError("El concepto es obligatorio.");
         if (!form.monto || Number(form.monto) <= 0) return setError("El monto debe ser mayor a 0.");
+        if (form.fecha > hoy()) return setError("No se pueden registrar fechas futuras.");
         setEnviando(true);
         try {
-            await onGuardar({ concepto: form.concepto.trim(), monto: Number(form.monto) });
+            await onGuardar({ concepto: form.concepto.trim(), monto: Number(form.monto), fecha: form.fecha });
             if (!esEdicion) setForm(FORM_VACIO);
         } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
@@ -30,6 +32,11 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
+                <input name="fecha" type="date" value={form.fecha} max={hoy()}
+                    onChange={handleChange} className={`${inputCls} sm:w-48`} />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                 <input name="concepto" value={form.concepto} onChange={handleChange} placeholder="Concepto *" className={inputCls} />
                 <input name="monto" type="number" min="0" value={form.monto} onChange={handleChange} placeholder="Monto *" className={`${inputCls} sm:w-36`} />

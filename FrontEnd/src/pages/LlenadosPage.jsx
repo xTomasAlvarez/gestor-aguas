@@ -16,15 +16,17 @@ const llenadoToForm = (l) => {
     l.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
     return { cantidades, costo_total: l.costo_total ?? "" };
 };
-const formToPayload = ({ cantidades, costo_total }) => ({
+const formToPayload = ({ cantidades, costo_total, fecha }) => ({
     productos: PRODUCTOS
         .filter(({ key }) => Number(cantidades[key]) > 0)
         .map(({ key }) => ({ producto: key, cantidad: Number(cantidades[key]) })),
     ...(costo_total !== "" && { costo_total: Number(costo_total) }),
+    ...(fecha && { fecha }),
 });
 
 // ── Formulario ────────────────────────────────────────────────────────────
-const FORM_VACIO = { cantidades: { ...CANT_VACIO }, costo_total: "" };
+const hoy = () => new Date().toISOString().slice(0, 10);
+const FORM_VACIO = { cantidades: { ...CANT_VACIO }, costo_total: "", fecha: hoy() };
 
 // Stepper táctil: fila con label a la izq y controles a la der
 const Stepper = ({ label, value, onChange }) => (
@@ -78,6 +80,12 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
+                <input type="date" value={form.fecha} max={hoy()}
+                    onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))}
+                    className={`${inputCls} sm:w-48`} />
+            </div>
             <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Unidades a cargar</p>
                 {/* Mobile: 1 columna full con steppers en fila. sm+: 3 columnas */}

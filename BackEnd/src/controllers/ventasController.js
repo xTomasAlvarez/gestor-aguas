@@ -8,16 +8,14 @@ import { construirIncDeuda, saldoPendiente } from "../helpers/deuda.js";
 // b) SOLO PAGO DE DEUDA:  items vacío → descuenta monto_pagado de deuda.saldo
 export const crearVenta = async (req, res) => {
     try {
-        const { metodo_pago, items = [], cliente: clienteId, total = 0, monto_pagado = 0 } = req.body;
+        const { metodo_pago, items = [], cliente: clienteId, total = 0, monto_pagado = 0, fecha } = req.body;
         const esCobranzaPura = items.length === 0;
 
         if (esCobranzaPura) {
-            // Modo Pago de Deuda: reduce directamente el saldo monetario del cliente
             await Cliente.findByIdAndUpdate(clienteId, {
                 $inc: { "deuda.saldo": -Math.abs(monto_pagado) },
             });
         } else {
-            // Modo Venta normal
             if (metodo_pago === "fiado") {
                 const incDeuda = construirIncDeuda(items, 1);
                 await Cliente.findByIdAndUpdate(clienteId, { $inc: incDeuda });
@@ -28,13 +26,18 @@ export const crearVenta = async (req, res) => {
             }
         }
 
-        const nuevaVenta = await Venta.create(req.body);
+        // Si el cliente envía una fecha manual, la usamos; sino el modelo usa Date.now
+        const payload = { ...req.body };
+        if (fecha) payload.fecha = new Date(fecha);
+
+        const nuevaVenta = await Venta.create(payload);
         res.status(201).json(nuevaVenta);
     } catch (error) {
         console.error("[crearVenta]", error);
         res.status(500).json({ message: "Error al crear la venta.", error: error.message });
     }
 };
+
 
 // ── GET /api/ventas ────────────────────────────────────────────────────────
 export const obtenerVentas = async (req, res) => {

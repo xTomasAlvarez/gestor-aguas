@@ -4,16 +4,18 @@ import Gasto   from "../models/Gastos.js";
 // ── POST /api/llenados ─────────────────────────────────────────────────────
 export const crearLlenado = async (req, res) => {
     try {
-        const nuevoLlenado = await Llenado.create(req.body);
+        const payload = { ...req.body };
+        if (payload.fecha) payload.fecha = new Date(payload.fecha);
 
-        // Auto-gasto: si tiene costo, crear un gasto paralelo
+        const nuevoLlenado = await Llenado.create(payload);
+
+        // Auto-gasto: si tiene costo, crear un gasto paralelo con la misma fecha
         if (nuevoLlenado.costo_total > 0) {
             const gasto = await Gasto.create({
                 concepto: "Llenado",
                 monto:    nuevoLlenado.costo_total,
-                fecha:    nuevoLlenado.fecha,
+                fecha:    nuevoLlenado.fecha,  // propaga la fecha manual si se usó una
             });
-            // Guardar referencia al gasto en el llenado
             nuevoLlenado.gasto_ref = gasto._id;
             await nuevoLlenado.save();
         }
@@ -24,6 +26,7 @@ export const crearLlenado = async (req, res) => {
         res.status(500).json({ message: "Error al crear el llenado.", error: error.message });
     }
 };
+
 
 // ── GET /api/llenados ──────────────────────────────────────────────────────
 export const obtenerLlenados = async (req, res) => {

@@ -9,7 +9,8 @@ import { PRODUCTOS, PROD_VACIO, METODOS_PAGO as METODOS } from "../utils/product
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 // ── Constantes ────────────────────────────────────────────────────────────
-const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "", esCobranza: false };
+const hoy = () => new Date().toISOString().slice(0, 10);
+const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "", esCobranza: false, fecha: hoy() };
 
 // Helpers
 const calcItems = (prods) =>
@@ -147,6 +148,7 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
         if (esCobranza && montoPagadoEfectivo <= 0) return setError("Ingresa el monto del pago.");
         if (!esCobranza && !items.length) return setError("Ingresa al menos un producto.");
         if (!esCobranza && total < 0)     return setError("El total no puede ser negativo.");
+        if (form.fecha > hoy())           return setError("No se pueden registrar fechas futuras.");
         setEnviando(true);
         try {
             await onGuardar({
@@ -156,6 +158,7 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                 items,
                 total:        esCobranza ? 0 : total,
                 monto_pagado: montoPagadoEfectivo,
+                fecha:        form.fecha,
             });
             if (!esEdicion) setForm(FORM_VACIO);
         } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
@@ -164,6 +167,14 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+            {/* Fecha del registro */}
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
+                <input type="date" value={form.fecha} max={hoy()}
+                    onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))}
+                    className={`${inputCls} sm:w-48`} />
+            </div>
 
             {/* Toggle modo cobranza */}
             {!esEdicion && (
