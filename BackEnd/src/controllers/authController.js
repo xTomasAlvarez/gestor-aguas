@@ -1,36 +1,82 @@
 import jwt      from "jsonwebtoken";
 import Usuario  from "../models/Usuario.js";
+import Empresa  from "../models/Empresa.js";
 
 const generarToken = (id) =>
     jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "12h" });
 
 // Solo expone campos seguros al frontend
 const usuarioSeguro = (u) => ({
-    _id: u._id, nombre: u.nombre, email: u.email, rol: u.rol, activo: u.activo,
+    _id:        u._id,
+    nombre:     u.nombre,
+    email:      u.email,
+    rol:        u.rol,
+    activo:     u.activo,
+    businessId: u.businessId ?? null,
 });
 
 // ── POST /api/auth/registrar ───────────────────────────────────────────────
+//
+// CASO A — Unirse a empresa (empleado):
+//   { nombre, email, password, inviteCode }
+//   Busca la empresa por codigoVinculacion y vincula al usuario como empleado.
+//
+// CASO B — Crear empresa (admin):
+//   { nombre, email, password, nombreEmpresa, masterCode }
+//   Verifica MASTER_ADMIN_CODE y crea una empresa nueva.
+//
 export const registrar = async (req, res) => {
     try {
-        const { nombre, email, password, registrationKey } = req.body;
-
-        // Validar clave de invitación
-        if (!registrationKey || registrationKey !== process.env.REGISTRATION_KEY) {
-            return res.status(401).json({ message: "Codigo de invitacion invalido." });
-        }
+        const { nombre, email, password, inviteCode, nombreEmpresa, masterCode } = req.body;
 
         if (!nombre || !email || !password)
-            return res.status(400).json({ message: "Nombre, email y contrasena son obligatorios." });
+            return res.status(400).json({ message: "Nombre, email y contraseña son obligatorios." });
 
         const existe = await Usuario.findOne({ email });
-        if (existe) return res.status(400).json({ message: "El email ya esta registrado." });
+        if (existe) return res.status(400).json({ message: "El email ya está registrado." });
 
-        // El rol siempre es 'empleado' y activo: false hasta que el admin apruebe
-        const usuario = await Usuario.create({ nombre, email, password }); // rol y activo usan defaults
-        res.status(201).json({
-            message: "Cuenta creada. Aguarda la aprobacion del administrador para poder ingresar.",
+        // ── CASO A: unirse a una empresa como empleado ─────────────────────
+        if (inviteCode) {
+            const empresa = await Empresa.findOne({
+                codigoVinculacion: inviteCode.trim().toUpperCase(),
+            });
+            if (!empresa)
+                return res.status(400).json({ message: "Código de empresa inválido. Verificá el código con tu administrador." });
+
+            const usuario = await Usuario.create({
+                nombre, email, password,
+                rol:        "empleado",
+                activo:     false,        // requiere aprobación del admin
+                businessId: empresa._id,
+            });
+
+            return res.status(201).json({
+                message: "Cuenta creada. Aguarda la aprobación del administrador para poder ingresar.",
+                usuario:  usuarioSeguro(usuario),
+            });
+        }
+
+        // ── CASO B: crear empresa nueva como admin ─────────────────────────
+        if (!masterCode || masterCode !== process.env.MASTER_ADMIN_CODE)
+            return res.status(403).json({ message: "No tienes autorización para crear una empresa." });
+
+        const empresa = await Empresa.create({
+            nombre: nombreEmpresa?.trim() || `Empresa de ${nombre}`,
+        });
+
+        const usuario = await Usuario.create({
+            nombre, email, password,
+            rol:        "admin",
+            activo:     true,             // el admin queda activo de inmediato
+            businessId: empresa._id,
+        });
+
+        return res.status(201).json({
+            message: `Empresa "${empresa.nombre}" creada. Ya podés iniciar sesión.`,
+            codigoVinculacion: empresa.codigoVinculacion,
             usuario: usuarioSeguro(usuario),
         });
+
     } catch (err) {
         console.error("[registrar]", err);
         res.status(500).json({ message: "Error al registrar usuario.", detalle: err.message });
@@ -42,7 +88,7 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password)
-            return res.status(400).json({ message: "Email y contrasena son obligatorios." });
+            return res.status(400).json({ message: "Email y contraseña son obligatorios." });
 
         const usuario = await Usuario.findOne({ email });
         if (!usuario) return res.status(401).json({ message: "Credenciales incorrectas." });
@@ -50,16 +96,15 @@ export const login = async (req, res) => {
         const ok = await usuario.compararPassword(password);
         if (!ok) return res.status(401).json({ message: "Credenciales incorrectas." });
 
-        // Bloquear cuentas inactivas
         if (!usuario.activo) {
             return res.status(403).json({
-                message: "Tu cuenta aun no fue aprobada. Contacta al administrador.",
+                message: "Tu cuenta aún no fue aprobada. Contacta al administrador.",
             });
         }
 
         res.json({ token: generarToken(usuario._id), usuario: usuarioSeguro(usuario) });
     } catch (err) {
         console.error("[login]", err);
-        res.status(500).json({ message: "Error al iniciar sesion.", detalle: err.message });
+        res.status(500).json({ message: "Error al iniciar sesión.", detalle: err.message });
     }
 };

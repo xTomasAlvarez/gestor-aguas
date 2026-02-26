@@ -1,4 +1,5 @@
 import Usuario from "../models/Usuario.js";
+import Empresa from "../models/Empresa.js";
 
 // ── GET /api/admin/usuarios ────────────────────────────────────────────────
 export const listarUsuarios = async (req, res) => {
@@ -37,5 +38,20 @@ export const eliminarUsuario = async (req, res) => {
         res.json({ message: "Usuario eliminado correctamente." });
     } catch (err) {
         res.status(500).json({ message: "Error al eliminar usuario.", detalle: err.message });
+    }
+};
+
+// ── GET /api/admin/empresa ─────────────────────────────────────────────────
+// Devuelve el codigo de vinculacion de la empresa del admin autenticado
+export const obtenerEmpresa = async (req, res) => {
+    try {
+        if (!req.usuario.businessId)
+            return res.status(404).json({ message: "Este usuario no tiene empresa asignada." });
+        const empresa = await Empresa.findById(req.usuario.businessId).select("nombre codigoVinculacion");
+        if (!empresa)
+            return res.status(404).json({ message: "Empresa no encontrada." });
+        res.json(empresa);
+    } catch (err) {
+        res.status(500).json({ message: "Error al obtener la empresa.", detalle: err.message });
     }
 };

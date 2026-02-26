@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { listarUsuarios, toggleActivo, eliminarUsuario } from "../services/adminService";
+import { listarUsuarios, toggleActivo, eliminarUsuario, obtenerEmpresa } from "../services/adminService";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 
@@ -32,6 +32,8 @@ const ConfigPage = () => {
     const [error,     setError]     = useState(null);
     const [procesando,   setProcesando]  = useState(null);
     const [confirmar,    setConfirmar]   = useState(null); // { id, nombre }
+    const [empresa,      setEmpresa]     = useState(null); // { nombre, codigoVinculacion }
+    const [copiado,      setCopiado]     = useState(false);
 
     const cargar = useCallback(async () => {
         try {
@@ -47,6 +49,18 @@ const ConfigPage = () => {
     }, []);
 
     useEffect(() => { cargar(); }, [cargar]);
+
+    // Cargar empresa del admin (silencioso si no tiene businessId todavía)
+    useEffect(() => {
+        if (usuario?.rol !== "admin") return;
+        obtenerEmpresa().then(({ data }) => setEmpresa(data)).catch(() => {});
+    }, [usuario]);
+
+    const copiarCodigo = () => {
+        if (!empresa?.codigoVinculacion) return;
+        navigator.clipboard.writeText(empresa.codigoVinculacion)
+            .then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); });
+    };
 
     const handleToggle = async (id) => {
         setProcesando(id);
@@ -94,6 +108,29 @@ const ConfigPage = () => {
                     <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Configuracion</h1>
                     <p className="text-sm text-slate-500 mt-1">Gestion de personal y accesos al sistema</p>
                 </div>
+
+                {/* Panel código de vinculación (solo admin con empresa) */}
+                {empresa && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5 mb-6">
+                        <h2 className="text-base font-bold text-slate-800">Código de vinculación</h2>
+                        <p className="text-xs text-slate-400 mt-0.5 mb-4">
+                            Compartí este código con tus empleados para que se registren en <span className="font-semibold">{empresa.nombre}</span>
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-center">
+                                <span className="text-2xl font-extrabold tracking-widest text-slate-800 font-mono">{empresa.codigoVinculacion}</span>
+                            </div>
+                            <button onClick={copiarCodigo}
+                                className={`flex-shrink-0 px-4 py-3 rounded-xl text-sm font-semibold border transition-colors ${
+                                    copiado
+                                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                                }`}>
+                                {copiado ? "¡Copiado!" : "Copiar"}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Panel de Personal */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
