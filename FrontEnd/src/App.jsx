@@ -14,6 +14,7 @@ import DashboardPage     from "./pages/DashboardPage";
 import ConfigPage        from "./pages/ConfigPage";
 import BroadcastPage     from "./pages/BroadcastPage";
 import SuspendedPage     from "./pages/SuspendedPage";
+import SuperAdminPage    from "./pages/SuperAdminPage";
 
 // Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página
 const Privada = ({ children }) => (
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/estadisticas" element={<Privada><DashboardPage /></Privada>} />
                 <Route path="/configuracion" element={<Privada><ConfigPage /></Privada>} />
                 <Route path="/broadcast"     element={<Privada><BroadcastPage /></Privada>} />
+                <Route path="/superadmin"    element={<Privada><SuperAdminPage /></Privada>} />
             </Routes>
         </BrowserRouter>
     </AuthProvider>

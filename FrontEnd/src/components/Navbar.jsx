@@ -58,6 +58,12 @@ const IconBroadcast = ({ cls }) => (
     </svg>
 );
 
+const IconShield = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+);
+
 const NAV_LINKS = [
     { to: "/clientes",     label: "Clientes",     Icon: IconClientes  },
     { to: "/ventas",       label: "Ventas",       Icon: IconVentas    },
@@ -73,7 +79,8 @@ const Navbar = () => {
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
 
-    const isAdmin   = usuario?.rol === "admin";
+    const isSuperAdmin = usuario?.rol === "superadmin";
+    const isAdmin = usuario?.rol === "admin" || isSuperAdmin;
     const navLinks  = [
         { to: "/clientes",      label: "Clientes",    Icon: IconClientes  },
         { to: "/ventas",        label: "Ventas",      Icon: IconVentas    },
@@ -84,6 +91,9 @@ const Navbar = () => {
         ...(isAdmin ? [
             { to: "/broadcast",    label: "Difusion",  Icon: IconBroadcast },
             { to: "/configuracion", label: "Config",   Icon: IconConfig    },
+        ] : []),
+        ...(isSuperAdmin ? [
+            { to: "/superadmin",   label: "SuperAdmin", Icon: IconShield   },
         ] : []),
     ];
 

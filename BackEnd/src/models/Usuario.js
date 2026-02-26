@@ -5,7 +5,7 @@ const usuarioSchema = new mongoose.Schema({
     nombre:     { type: String, required: true, trim: true },
     email:      { type: String, required: true, unique: true, lowercase: true, trim: true },
     password:   { type: String, required: true, minlength: 6 },
-    rol:        { type: String, enum: ["admin", "empleado"], default: "empleado" },
+    rol:        { type: String, enum: ["admin", "empleado", "superadmin"], default: "empleado" },
     activo:     { type: Boolean, default: false },
     // businessId: referencia a la empresa a la que pertenece el usuario
     businessId: { type: mongoose.Schema.Types.ObjectId, ref: "Empresa", default: null },
