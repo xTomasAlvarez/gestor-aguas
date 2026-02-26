@@ -4,7 +4,8 @@ import Empresa from "../models/Empresa.js";
 // ── GET /api/admin/usuarios ────────────────────────────────────────────────
 export const listarUsuarios = async (req, res) => {
     try {
-        const usuarios = await Usuario.find().select("-password").sort({ createdAt: -1 });
+        // Solo usuarios de la misma empresa del admin autenticado
+        const usuarios = await Usuario.find({ businessId: req.usuario.businessId }).select("-password").sort({ createdAt: -1 });
         res.json(usuarios);
     } catch (err) {
         res.status(500).json({ message: "Error al obtener usuarios.", detalle: err.message });
@@ -15,8 +16,9 @@ export const listarUsuarios = async (req, res) => {
 // Alterna el campo 'activo' del usuario
 export const toggleActivo = async (req, res) => {
     try {
-        const usuario = await Usuario.findById(req.params.id).select("-password");
-        if (!usuario) return res.status(404).json({ message: "Usuario no encontrado." });
+        // Validar que el usuario pertenece a la misma empresa
+        const usuario = await Usuario.findOne({ _id: req.params.id, businessId: req.usuario.businessId }).select("-password");
+        if (!usuario) return res.status(404).json({ message: "Usuario no encontrado en tu empresa." });
 
         usuario.activo = !usuario.activo;
         await usuario.save();
@@ -29,15 +31,16 @@ export const toggleActivo = async (req, res) => {
 // ── DELETE /api/admin/usuarios/:id ────────────────────────────────────────
 export const eliminarUsuario = async (req, res) => {
     try {
-        // Protección: no se puede eliminar al propio admin logueado
-        if (String(req.params.id) === String(req.usuario._id)) {
-            return res.status(400).json({ message: "No puedes eliminar tu propia cuenta." });
-        }
-        const eliminado = await Usuario.findByIdAndDelete(req.params.id);
-        if (!eliminado) return res.status(404).json({ message: "Usuario no encontrado." });
+        if (String(req.params.id) === String(req.usuario._id))
+            return res.status(400).json({ message: "No podes eliminar tu propia cuenta." });
+
+        // Validar que el usuario pertenece a la misma empresa antes de eliminar
+        const eliminado = await Usuario.findOneAndDelete({ _id: req.params.id, businessId: req.usuario.businessId });
+        if (!eliminado) return res.status(404).json({ message: "Usuario no encontrado en tu empresa." });
+
         res.json({ message: "Usuario eliminado correctamente." });
     } catch (err) {
-        res.status(500).json({ message: "Error al eliminar usuario.", detalle: err.message });
+        res.status(500).json({ message: "Error al eliminar el usuario.", detalle: err.message });
     }
 };
 

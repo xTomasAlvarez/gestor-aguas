@@ -2,32 +2,32 @@ import Venta   from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
 import { construirIncDeuda, saldoPendiente } from "../helpers/deuda.js";
 
+const biz = (req) => req.usuario.businessId;
+
 // ── POST /api/ventas ───────────────────────────────────────────────────────
-// Dos escenarios posibles:
-// a) VENTA CON PRODUCTOS: calcula deuda de envases (si fiado) + saldo monetario
-// b) SOLO PAGO DE DEUDA:  items vacío → descuenta monto_pagado de deuda.saldo
 export const crearVenta = async (req, res) => {
     try {
+        const businessId = biz(req);
         const { metodo_pago, items = [], cliente: clienteId, total = 0, monto_pagado = 0, fecha } = req.body;
         const esCobranzaPura = items.length === 0;
 
         if (esCobranzaPura) {
-            await Cliente.findByIdAndUpdate(clienteId, {
-                $inc: { "deuda.saldo": -Math.abs(monto_pagado) },
-            });
+            await Cliente.findOneAndUpdate(
+                { _id: clienteId, businessId },
+                { $inc: { "deuda.saldo": -Math.abs(monto_pagado) } }
+            );
         } else {
             if (metodo_pago === "fiado") {
                 const incDeuda = construirIncDeuda(items, 1);
-                await Cliente.findByIdAndUpdate(clienteId, { $inc: incDeuda });
+                await Cliente.findOneAndUpdate({ _id: clienteId, businessId }, { $inc: incDeuda });
             }
             const saldo = saldoPendiente(total, monto_pagado);
             if (saldo > 0) {
-                await Cliente.findByIdAndUpdate(clienteId, { $inc: { "deuda.saldo": saldo } });
+                await Cliente.findOneAndUpdate({ _id: clienteId, businessId }, { $inc: { "deuda.saldo": saldo } });
             }
         }
 
-        // Si el cliente envía una fecha manual, la usamos; sino el modelo usa Date.now
-        const payload = { ...req.body };
+        const payload = { ...req.body, businessId };
         if (fecha) payload.fecha = new Date(fecha);
 
         const nuevaVenta = await Venta.create(payload);
@@ -38,11 +38,10 @@ export const crearVenta = async (req, res) => {
     }
 };
 
-
 // ── GET /api/ventas ────────────────────────────────────────────────────────
 export const obtenerVentas = async (req, res) => {
     try {
-        const ventas = await Venta.find()
+        const ventas = await Venta.find({ businessId: biz(req) })
             .populate("cliente", "nombre direccion")
             .sort({ fecha: -1 });
         res.status(200).json(ventas);
@@ -54,7 +53,8 @@ export const obtenerVentas = async (req, res) => {
 // ── GET /api/ventas/:id ────────────────────────────────────────────────────
 export const obtenerVentaPorId = async (req, res) => {
     try {
-        const venta = await Venta.findById(req.params.id).populate("cliente", "nombre direccion");
+        const venta = await Venta.findOne({ _id: req.params.id, businessId: biz(req) })
+            .populate("cliente", "nombre direccion");
         if (!venta) return res.status(404).json({ message: "Venta no encontrada." });
         res.status(200).json(venta);
     } catch (error) {
@@ -63,17 +63,16 @@ export const obtenerVentaPorId = async (req, res) => {
 };
 
 // ── PUT /api/ventas/:id ────────────────────────────────────────────────────
-// VIAJE EN EL TIEMPO: revierte la deuda original, luego aplica la nueva
 export const actualizarVenta = async (req, res) => {
     try {
-        const ventaOriginal = await Venta.findById(req.params.id);
+        const businessId = biz(req);
+        const ventaOriginal = await Venta.findOne({ _id: req.params.id, businessId });
         if (!ventaOriginal) return res.status(404).json({ message: "Venta no encontrada." });
 
         const esCobranzaOriginal = ventaOriginal.items.length === 0;
 
         // Paso 1: Revertir deuda ORIGINAL
         if (esCobranzaOriginal) {
-            // Era un pago de deuda: devolver el saldo que se había descontado
             await Cliente.findByIdAndUpdate(ventaOriginal.cliente, {
                 $inc: { "deuda.saldo": Math.abs(ventaOriginal.monto_pagado || 0) },
             });
@@ -90,7 +89,7 @@ export const actualizarVenta = async (req, res) => {
 
         // Paso 2: Aplicar deuda NUEVA
         const { metodo_pago: nuevoMetodo, items: nuevosItems = [], cliente: nuevoClienteId, total: nuevoTotal = 0, monto_pagado: nuevoPagado = 0 } = req.body;
-        const clienteTarget  = nuevoClienteId || ventaOriginal.cliente;
+        const clienteTarget   = nuevoClienteId || ventaOriginal.cliente;
         const esCobranzaNueva = nuevosItems.length === 0;
 
         if (esCobranzaNueva) {
@@ -123,13 +122,13 @@ export const actualizarVenta = async (req, res) => {
 // ── DELETE /api/ventas/:id ─────────────────────────────────────────────────
 export const eliminarVenta = async (req, res) => {
     try {
-        const venta = await Venta.findById(req.params.id);
+        const businessId = biz(req);
+        const venta = await Venta.findOne({ _id: req.params.id, businessId });
         if (!venta) return res.status(404).json({ message: "Venta no encontrada." });
 
         const esCobranza = venta.items.length === 0;
 
         if (esCobranza) {
-            // Revertir el descuento de saldo que se había aplicado
             await Cliente.findByIdAndUpdate(venta.cliente, {
                 $inc: { "deuda.saldo": Math.abs(venta.monto_pagado || 0) },
             });

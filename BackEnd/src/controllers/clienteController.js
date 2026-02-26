@@ -1,11 +1,14 @@
 import Cliente from "../models/Cliente.js";
 import Venta   from "../models/Venta.js";
 
+// Helper: businessId del usuario autenticado (obligatorio en todas las queries)
+const biz = (req) => req.usuario.businessId;
+
 // ── GET /api/clientes/inactivos ────────────────────────────────────────────
 export const obtenerInactivos = async (req, res) => {
     try {
         const { nombre } = req.query;
-        const filtro = { activo: false };
+        const filtro = { activo: false, businessId: biz(req) };
         if (nombre) filtro.nombre = { $regex: nombre, $options: "i" };
         const clientes = await Cliente.find(filtro).sort({ nombre: 1 }).lean();
         res.status(200).json(clientes);
@@ -17,7 +20,7 @@ export const obtenerInactivos = async (req, res) => {
 // ── PATCH /api/clientes/:id/estado ────────────────────────────────────────
 export const toggleEstado = async (req, res) => {
     try {
-        const cliente = await Cliente.findById(req.params.id);
+        const cliente = await Cliente.findOne({ _id: req.params.id, businessId: biz(req) });
         if (!cliente) return res.status(404).json({ message: "Cliente no encontrado." });
         cliente.activo = !cliente.activo;
         await cliente.save();
@@ -28,13 +31,14 @@ export const toggleEstado = async (req, res) => {
 };
 
 // ── POST /api/clientes ─────────────────────────────────────────────────────
-// Regla: Bloquear si ya existe el mismo teléfono o la misma combinación nombre+dirección
 export const crearCliente = async (req, res) => {
     try {
         const { nombre, direccion, telefono } = req.body;
+        const businessId = biz(req);
 
-        const condicionesDuplicado = [{ nombre, direccion }];
-        if (telefono) condicionesDuplicado.push({ telefono });
+        // Anti-duplicados DENTRO de la misma empresa
+        const condicionesDuplicado = [{ nombre, direccion, businessId }];
+        if (telefono) condicionesDuplicado.push({ telefono, businessId });
 
         const clienteExistente = await Cliente.findOne({ $or: condicionesDuplicado });
         if (clienteExistente) {
@@ -43,7 +47,7 @@ export const crearCliente = async (req, res) => {
             });
         }
 
-        const nuevoCliente = await Cliente.create(req.body);
+        const nuevoCliente = await Cliente.create({ ...req.body, businessId });
         res.status(201).json(nuevoCliente);
     } catch (error) {
         res.status(500).json({ message: "Error al crear el cliente.", error: error.message });
@@ -51,14 +55,14 @@ export const crearCliente = async (req, res) => {
 };
 
 // ── GET /api/clientes ──────────────────────────────────────────────────────
-// Incluye saldo_pendiente calculado en tiempo real desde las ventas (total - monto_pagado)
 export const obtenerClientes = async (req, res) => {
     try {
         const { nombre } = req.query;
+        const businessId = biz(req);
 
-        // Agrupamos el saldo pendiente de ventas por cliente (todas las ventas con items)
+        // Saldo pendiente — solo ventas de esta empresa
         const saldosPorCliente = await Venta.aggregate([
-            { $match: { $expr: { $gt: [{ $size: "$items" }, 0] } } },
+            { $match: { businessId, $expr: { $gt: [{ $size: "$items" }, 0] } } },
             { $group: {
                 _id:            "$cliente",
                 saldo_pendiente: { $sum: { $max: [0, { $subtract: ["$total", "$monto_pagado"] }] } },
@@ -68,13 +72,10 @@ export const obtenerClientes = async (req, res) => {
             saldosPorCliente.map(({ _id, saldo_pendiente }) => [String(_id), saldo_pendiente])
         );
 
-        // Filtro de clientes activos (+ búsqueda opcional por nombre)
-        const filtro = { activo: true };
+        const filtro = { activo: true, businessId };
         if (nombre) filtro.nombre = { $regex: nombre, $options: "i" };
 
         const clientes = await Cliente.find(filtro).sort({ nombre: 1 }).lean();
-
-        // Inyectar saldo_pendiente calculado en cada cliente
         const clientesConSaldo = clientes.map((c) => ({
             ...c,
             saldo_pendiente: saldoMap[String(c._id)] || 0,
@@ -89,12 +90,8 @@ export const obtenerClientes = async (req, res) => {
 // ── GET /api/clientes/:id ──────────────────────────────────────────────────
 export const obtenerClientePorId = async (req, res) => {
     try {
-        const cliente = await Cliente.findById(req.params.id);
-
-        if (!cliente) {
-            return res.status(404).json({ message: "Cliente no encontrado." });
-        }
-
+        const cliente = await Cliente.findOne({ _id: req.params.id, businessId: biz(req) });
+        if (!cliente) return res.status(404).json({ message: "Cliente no encontrado." });
         res.status(200).json(cliente);
     } catch (error) {
         res.status(500).json({ message: "Error al obtener el cliente.", error: error.message });
@@ -104,16 +101,12 @@ export const obtenerClientePorId = async (req, res) => {
 // ── PUT /api/clientes/:id ──────────────────────────────────────────────────
 export const actualizarCliente = async (req, res) => {
     try {
-        const clienteActualizado = await Cliente.findByIdAndUpdate(
-            req.params.id,
+        const clienteActualizado = await Cliente.findOneAndUpdate(
+            { _id: req.params.id, businessId: biz(req) },
             req.body,
             { new: true, runValidators: true }
         );
-
-        if (!clienteActualizado) {
-            return res.status(404).json({ message: "Cliente no encontrado." });
-        }
-
+        if (!clienteActualizado) return res.status(404).json({ message: "Cliente no encontrado." });
         res.status(200).json(clienteActualizado);
     } catch (error) {
         res.status(500).json({ message: "Error al actualizar el cliente.", error: error.message });
@@ -121,23 +114,16 @@ export const actualizarCliente = async (req, res) => {
 };
 
 // ── DELETE /api/clientes/:id ───────────────────────────────────────────────
-// Regla SOFT DELETE: cambia 'activo' a false en lugar de eliminar el documento
+// Soft-delete: cambia 'activo' a false
 export const eliminarCliente = async (req, res) => {
     try {
-        const clienteDesactivado = await Cliente.findByIdAndUpdate(
-            req.params.id,
+        const clienteDesactivado = await Cliente.findOneAndUpdate(
+            { _id: req.params.id, businessId: biz(req) },
             { activo: false },
             { new: true }
         );
-
-        if (!clienteDesactivado) {
-            return res.status(404).json({ message: "Cliente no encontrado." });
-        }
-
-        res.status(200).json({
-            message: "Cliente desactivado correctamente.",
-            cliente: clienteDesactivado,
-        });
+        if (!clienteDesactivado) return res.status(404).json({ message: "Cliente no encontrado." });
+        res.status(200).json({ message: "Cliente desactivado correctamente.", cliente: clienteDesactivado });
     } catch (error) {
         res.status(500).json({ message: "Error al desactivar el cliente.", error: error.message });
     }

@@ -41,6 +41,12 @@ const llenadoSchema = new Schema(
             ref:     "Gasto",
             default: null,
         },
+        businessId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "Empresa",
+            default: null,
+            index:   true,
+        },
     },
     {
         timestamps: true,

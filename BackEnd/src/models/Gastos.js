@@ -18,6 +18,12 @@ const gastoSchema = new Schema(
             required: [true, "El monto es obligatorio."],
             min:      [0, "El monto no puede ser negativo."],
         },
+        businessId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "Empresa",
+            default: null,
+            index:   true,
+        },
     },
     {
         timestamps: true,

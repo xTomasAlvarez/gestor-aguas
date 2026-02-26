@@ -41,11 +41,8 @@ const ventaSchema = new Schema(
             default: Date.now,
         },
         items: {
-            type:     [itemSchema],
-            validate: {
-                validator: (arr) => arr.length > 0,
-                message:   "La venta debe tener al menos un item.",
-            },
+            type: [itemSchema],
+            default: [],
         },
         descuento: {
             type:    Number,
@@ -65,6 +62,12 @@ const ventaSchema = new Schema(
             type:    Number,
             default: 0,
             min:     [0, "El monto pagado no puede ser negativo."],
+        },
+        businessId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "Empresa",
+            default: null,
+            index:   true,
         },
     },
     {

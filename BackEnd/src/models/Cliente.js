@@ -39,9 +39,15 @@ const clienteSchema = new Schema(
             type:    Boolean,
             default: true,
         },
+        businessId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "Empresa",
+            default: null,
+            index:   true,
+        },
     },
     {
-        timestamps: true, // Agrega createdAt y updatedAt automáticamente
+        timestamps: true,
         versionKey: false,
     }
 );

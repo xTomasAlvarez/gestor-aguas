@@ -1,10 +1,13 @@
 import Llenado from "../models/Llenado.js";
 import Gasto   from "../models/Gastos.js";
 
+const biz = (req) => req.usuario.businessId;
+
 // ── POST /api/llenados ─────────────────────────────────────────────────────
 export const crearLlenado = async (req, res) => {
     try {
-        const payload = { ...req.body };
+        const businessId = biz(req);
+        const payload = { ...req.body, businessId };
         if (payload.fecha) payload.fecha = new Date(payload.fecha);
 
         const nuevoLlenado = await Llenado.create(payload);
@@ -12,9 +15,10 @@ export const crearLlenado = async (req, res) => {
         // Auto-gasto: si tiene costo, crear un gasto paralelo con la misma fecha
         if (nuevoLlenado.costo_total > 0) {
             const gasto = await Gasto.create({
-                concepto: "Llenado",
-                monto:    nuevoLlenado.costo_total,
-                fecha:    nuevoLlenado.fecha,  // propaga la fecha manual si se usó una
+                concepto:   "Llenado",
+                monto:      nuevoLlenado.costo_total,
+                fecha:      nuevoLlenado.fecha,
+                businessId,
             });
             nuevoLlenado.gasto_ref = gasto._id;
             await nuevoLlenado.save();
@@ -27,11 +31,10 @@ export const crearLlenado = async (req, res) => {
     }
 };
 
-
 // ── GET /api/llenados ──────────────────────────────────────────────────────
 export const obtenerLlenados = async (req, res) => {
     try {
-        const llenados = await Llenado.find().sort({ fecha: -1 });
+        const llenados = await Llenado.find({ businessId: biz(req) }).sort({ fecha: -1 });
         res.status(200).json(llenados);
     } catch (error) {
         res.status(500).json({ message: "Error al obtener los llenados.", error: error.message });
@@ -41,7 +44,7 @@ export const obtenerLlenados = async (req, res) => {
 // ── GET /api/llenados/:id ──────────────────────────────────────────────────
 export const obtenerLlenadoPorId = async (req, res) => {
     try {
-        const llenado = await Llenado.findById(req.params.id);
+        const llenado = await Llenado.findOne({ _id: req.params.id, businessId: biz(req) });
         if (!llenado) return res.status(404).json({ message: "Llenado no encontrado." });
         res.status(200).json(llenado);
     } catch (error) {
@@ -50,17 +53,16 @@ export const obtenerLlenadoPorId = async (req, res) => {
 };
 
 // ── PUT /api/llenados/:id ──────────────────────────────────────────────────
-// Sincroniza el gasto vinculado con el nuevo costo
 export const actualizarLlenado = async (req, res) => {
     try {
-        const llenadoOriginal = await Llenado.findById(req.params.id);
+        const businessId = biz(req);
+        const llenadoOriginal = await Llenado.findOne({ _id: req.params.id, businessId });
         if (!llenadoOriginal) return res.status(404).json({ message: "Llenado no encontrado." });
 
         const nuevoCosto = req.body.costo_total;
         let   gastoRef   = llenadoOriginal.gasto_ref;
 
         if (gastoRef) {
-            // Ya existe un gasto: actualizar o eliminar según el nuevo costo
             if (nuevoCosto > 0) {
                 await Gasto.findByIdAndUpdate(gastoRef, {
                     monto: nuevoCosto,
@@ -71,11 +73,11 @@ export const actualizarLlenado = async (req, res) => {
                 gastoRef = null;
             }
         } else if (nuevoCosto > 0) {
-            // No había gasto: crear uno nuevo
             const nuevoGasto = await Gasto.create({
-                concepto: "Llenado",
-                monto:    nuevoCosto,
-                fecha:    req.body.fecha || llenadoOriginal.fecha,
+                concepto:   "Llenado",
+                monto:      nuevoCosto,
+                fecha:      req.body.fecha || llenadoOriginal.fecha,
+                businessId,
             });
             gastoRef = nuevoGasto._id;
         }
@@ -94,13 +96,11 @@ export const actualizarLlenado = async (req, res) => {
 };
 
 // ── DELETE /api/llenados/:id ───────────────────────────────────────────────
-// También elimina el gasto vinculado si existe
 export const eliminarLlenado = async (req, res) => {
     try {
-        const llenado = await Llenado.findById(req.params.id);
+        const llenado = await Llenado.findOne({ _id: req.params.id, businessId: biz(req) });
         if (!llenado) return res.status(404).json({ message: "Llenado no encontrado." });
 
-        // Eliminar gasto vinculado
         if (llenado.gasto_ref) {
             await Gasto.findByIdAndDelete(llenado.gasto_ref);
         }

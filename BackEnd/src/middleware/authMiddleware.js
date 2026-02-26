@@ -3,7 +3,7 @@ import Usuario from "../models/Usuario.js";
 
 /**
  * Middleware de autenticación por JWT.
- * Agrega req.usuario con los datos del usuario autenticado.
+ * Agrega req.usuario con los datos del usuario autenticado (fresh desde BD).
  */
 export const proteger = async (req, res, next) => {
     try {
@@ -17,6 +17,9 @@ export const proteger = async (req, res, next) => {
         req.usuario = await Usuario.findById(decoded.id).select("-password");
         if (!req.usuario)
             return res.status(401).json({ message: "Usuario no encontrado." });
+
+        // ── Log de seguridad (temporal, para diagnóstico multi-tenant) ────────
+        console.log(`[AUTH] Usuario: ${req.usuario.email} | Rol: ${req.usuario.rol} | Empresa: ${req.usuario.businessId ?? "SIN EMPRESA"} | ${req.method} ${req.originalUrl}`);
 
         next();
     } catch {
@@ -34,3 +37,4 @@ export const soloAdmin = (req, res, next) => {
     }
     next();
 };
+
