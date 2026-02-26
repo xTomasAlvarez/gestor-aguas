@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider }  from "./context/AuthContext";
-import ProtectedRoute    from "./components/ProtectedRoute";
-import Navbar            from "./components/Navbar";
+import { AuthProvider }     from "./context/AuthContext";
+import ProtectedRoute       from "./components/ProtectedRoute";
+import Navbar               from "./components/Navbar";
+import OfflineIndicator     from "./components/OfflineIndicator";
 import LoginPage         from "./pages/LoginPage";
 import RegisterPage      from "./pages/RegisterPage";
 import ClientesPage      from "./pages/ClientesPage";
@@ -26,6 +27,7 @@ const Privada = ({ children }) => (
 const App = () => (
     <AuthProvider>
         <BrowserRouter>
+            <OfflineIndicator />
             <Routes>
                 {/* Rutas públicas */}
                 <Route path="/login"    element={<LoginPage />} />

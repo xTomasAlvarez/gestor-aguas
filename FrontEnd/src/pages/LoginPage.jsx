@@ -3,11 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { loginService } from "../services/authService";
 import { useAuth }      from "../context/AuthContext";
 import toast            from "react-hot-toast";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Download } from "lucide-react";
+import useInstallPrompt from "../hooks/useInstallPrompt";
 
 const LoginPage = () => {
     const { login } = useAuth();
     const navigate  = useNavigate();
+    const { canInstall, promptInstall } = useInstallPrompt();
 
     const [form,     setForm]     = useState({ email: "", password: "" });
     const [verPass,  setVerPass]  = useState(false);
@@ -92,6 +94,15 @@ const LoginPage = () => {
                         <Link to="/register" className="text-blue-600 hover:underline font-semibold">Registrarse</Link>
                     </p>
                 </div>
+
+                {/* Banner de instalación PWA */}
+                {canInstall && (
+                    <button onClick={promptInstall}
+                        className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors shadow-sm">
+                        <Download className="w-4 h-4 text-blue-600" />
+                        Instalar app en este dispositivo
+                    </button>
+                )}
             </div>
         </div>
     );
