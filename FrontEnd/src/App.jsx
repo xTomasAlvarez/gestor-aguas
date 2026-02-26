@@ -16,15 +16,44 @@ import ConfigPage        from "./pages/ConfigPage";
 import BroadcastPage     from "./pages/BroadcastPage";
 import SuspendedPage     from "./pages/SuspendedPage";
 import SuperAdminPage    from "./pages/SuperAdminPage";
+import OnboardingPage    from "./pages/OnboardingPage";
+import { useConfig }     from "./context/ConfigContext";
+import { useAuth }       from "./context/AuthContext";
 
-// Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página
+// Evalúa si la empresa necesita el Onboarding o puede seguir normal
+const OnboardingGuard = ({ children }) => {
+    const { config } = useConfig();
+    const { usuario } = useAuth();
+
+    if (config?.cargando) return null;
+
+    // Si es superadmin o empleado, u onboarding ya está completo -> Pasa
+    if (usuario?.rol === "admin" && config && !config.onboardingCompletado) {
+        return <Navigate to="/onboarding" replace />;
+    }
+
+    return children;
+};
+
+// Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página regular
 const Privada = ({ children }) => (
     <ProtectedRoute>
         <ConfigProvider>
-            <Navbar />
-            <div className="pb-20 sm:pb-0">
-                {children}
-            </div>
+            <OnboardingGuard>
+                <Navbar />
+                <div className="pb-20 sm:pb-0">
+                    {children}
+                </div>
+            </OnboardingGuard>
+        </ConfigProvider>
+    </ProtectedRoute>
+);
+
+// Wrapper especial sin layout para el Wizard
+const OnboardingRoute = () => (
+    <ProtectedRoute>
+        <ConfigProvider>
+            <OnboardingPage />
         </ConfigProvider>
     </ProtectedRoute>
 );
@@ -39,8 +68,11 @@ const App = () => (
                 <Route path="/register"    element={<RegisterPage />} />
                 <Route path="/suspended"   element={<SuspendedPage />} />
 
-                {/* Rutas privadas */}
-                <Route path="/"          element={<Navigate to="/clientes" replace />} />
+                {/* Rutas Privadas / Onboarding */}
+                <Route path="/onboarding"    element={<OnboardingRoute />} />
+                
+                {/* Rutas Aplicación Principal */}
+                <Route path="/"             element={<Navigate to="/clientes" replace />} />
                 <Route path="/clientes"     element={<Privada><ClientesPage /></Privada>} />
                 <Route path="/ventas"       element={<Privada><VentasPage /></Privada>} />
                 <Route path="/planilla"     element={<Privada><PlanillaPage /></Privada>} />

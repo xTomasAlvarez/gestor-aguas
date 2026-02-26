@@ -27,7 +27,8 @@ export const obtenerConfiguracion = async (req, res) => {
             nombre:    empresa.nombre,
             logo:      empresa.logo,
             telefono:  empresa.telefono,
-            productos: empresa.productos || []
+            productos: empresa.productos || [],
+            onboardingCompletado: empresa.onboardingCompletado || false
         });
 
     } catch (error) {
@@ -50,13 +51,14 @@ export const actualizarConfiguracion = async (req, res) => {
         }
 
         // Permitimos extraer solo los campos editables de la identidad
-        const { nombre, logo, telefono, productos } = req.body;
+        const { nombre, logo, telefono, productos, onboardingCompletado } = req.body;
         
         const payload = {};
         if (nombre !== undefined) payload.nombre = nombre;
         if (logo !== undefined) payload.logo = logo;
         if (telefono !== undefined) payload.telefono = telefono;
         if (productos !== undefined) payload.productos = productos;
+        if (onboardingCompletado !== undefined) payload.onboardingCompletado = onboardingCompletado;
 
         const empresaActualizada = await Empresa.findByIdAndUpdate(
             businessId,
@@ -68,7 +70,8 @@ export const actualizarConfiguracion = async (req, res) => {
             nombre:    empresaActualizada.nombre,
             logo:      empresaActualizada.logo,
             telefono:  empresaActualizada.telefono,
-            productos: empresaActualizada.productos
+            productos: empresaActualizada.productos,
+            onboardingCompletado: empresaActualizada.onboardingCompletado
         });
 
     } catch (error) {

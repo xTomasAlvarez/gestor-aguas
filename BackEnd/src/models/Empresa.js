@@ -18,6 +18,7 @@ const empresaSchema = new mongoose.Schema({
     suspendida:         { type: Boolean, default: false },
     logo:               { type: String, default: null, trim: true },
     telefono:           { type: String, default: null, trim: true },
+    onboardingCompletado: { type: Boolean, default: false },
     productos: {
         type: [productoSchema],
         default: [
