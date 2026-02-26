@@ -2,7 +2,7 @@ import jwt      from "jsonwebtoken";
 import Usuario  from "../models/Usuario.js";
 
 const generarToken = (id) =>
-    jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "12h" });
 
 // Solo expone campos seguros al frontend
 const usuarioSeguro = (u) => ({

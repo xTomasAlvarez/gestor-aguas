@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { setLogoutFn } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -22,6 +23,12 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("usuario");
         setUsuario(null);
     }, []);
+
+    // Registra el logout en el interceptor de Axios para manejar expiración de token
+    useEffect(() => {
+        setLogoutFn(logout);
+        return () => setLogoutFn(null);
+    }, [logout]);
 
     return (
         <AuthContext.Provider value={{ usuario, login, logout }}>
