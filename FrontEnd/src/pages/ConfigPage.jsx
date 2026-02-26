@@ -33,8 +33,7 @@ const TabIdentidad = ({ empresa, setEmpresa }) => {
     const { config, recargarConfig } = useConfig();
     const [form, setForm] = useState({ 
         nombre: config?.nombre || "", 
-        telefono: config?.telefono || "", 
-        logo: config?.logo || "" 
+        telefono: config?.telefono || ""
     });
     const [cargando, setCargando] = useState(false);
     const [confirmarRegen, setConfirmarRegen] = useState(false);
@@ -45,8 +44,7 @@ const TabIdentidad = ({ empresa, setEmpresa }) => {
     useEffect(() => {
         setForm({ 
             nombre: config?.nombre || "", 
-            telefono: config?.telefono || "", 
-            logo: config?.logo || "" 
+            telefono: config?.telefono || ""
         });
     }, [config]);
 
@@ -56,8 +54,7 @@ const TabIdentidad = ({ empresa, setEmpresa }) => {
         try {
             await actualizarIdentidad({ 
                 nombre: form.nombre.trim(), 
-                telefono: form.telefono.trim(), 
-                logo: form.logo.trim() 
+                telefono: form.telefono.trim()
             });
             await recargarConfig();
             toast.success("Identidad actualizada correctamente");
@@ -94,16 +91,12 @@ const TabIdentidad = ({ empresa, setEmpresa }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5">
                 <h2 className="text-base font-bold text-slate-800 mb-4">Perfil Público</h2>
                 <form onSubmit={handleGuardar} className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre Comercial</label>
                             <input type="text" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} className={inputCls} placeholder="Ej: Aguas Delicia" required />
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Logo URL</label>
-                            <input type="url" value={form.logo} onChange={e => setForm(p => ({ ...p, logo: e.target.value }))} className={inputCls} placeholder="https://ejemplo.com/logo.png" />
-                        </div>
-                        <div className="sm:col-span-2">
                             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Teléfono (WhatsApp)</label>
                             <input type="text" value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))} className={inputCls} placeholder="Ej: +54 9 351 ..." />
                         </div>

@@ -107,13 +107,9 @@ const Navbar = () => {
             <nav className="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
                 <div className="max-w-6xl mx-auto px-4 sm:px-8 flex items-center justify-between h-14">
                     <Link to="/clientes" className="flex items-center gap-2 font-extrabold text-base tracking-tight text-white hover:text-blue-400 transition-colors">
-                        {config?.logo ? (
-                            <img src={config.logo} alt="Logo" className="w-6 h-6 object-contain rounded" />
-                        ) : (
-                            <span className="w-6 h-6 rounded bg-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-inner">
-                                {config?.nombre?.[0]?.toUpperCase() || "A"}
-                            </span>
-                        )}
+                        <span className="w-6 h-6 rounded bg-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-inner">
+                            {config?.nombre?.[0]?.toUpperCase() || "A"}
+                        </span>
                         {config?.nombre || "Gestion Reparto"}
                     </Link>
 
