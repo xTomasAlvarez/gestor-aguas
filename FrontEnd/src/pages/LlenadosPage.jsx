@@ -3,6 +3,8 @@ import { obtenerLlenados, crearLlenado, actualizarLlenado, eliminarLlenado } fro
 import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
+import ConfirmModal from "../components/ConfirmModal";
+import toast from "react-hot-toast";
 import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
 import { PRODUCTOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
@@ -176,6 +178,7 @@ const LlenadosPage = () => {
     const [filtroTiempo, setFiltroTiempo] = useState("hoy");
     const [expanded,     setExpanded]     = useState(new Set());
     const [editando,     setEditando]     = useState(null);
+    const [confirmar,    setConfirmar]    = useState(null); // { id }
 
     const handleFiltro = (val) => { setFiltroTiempo(val); setExpanded(new Set()); };
     const toggleDia = (key) => setExpanded((p) => {
@@ -187,9 +190,11 @@ const LlenadosPage = () => {
         const { data } = await actualizarLlenado(editando._id, payload);
         actualizar(data); setEditando(null);
     };
-    const handleEliminar = async (id) => {
-        if (!window.confirm("Eliminar este llenado?")) return;
-        await eliminarLlenado(id); eliminarLocal(id);
+    const handleEliminar = async () => {
+        const { id } = confirmar;
+        await eliminarLlenado(id);
+        eliminarLocal(id);
+        toast.success("Llenado eliminado correctamente.");
     };
 
     const filtrados  = filtrarPorTiempo(llenados, filtroTiempo);
@@ -237,7 +242,8 @@ const LlenadosPage = () => {
                 {!cargando && !error && dias.map((dk) => (
                     <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}
                         expanded={expanded.has(dk)} onToggle={toggleDia}
-                        onEditar={setEditando} onEliminar={handleEliminar} />
+                        onEditar={setEditando}
+                        onEliminar={(id) => setConfirmar({ id })} />
                 ))}
             </div>
 
@@ -247,6 +253,15 @@ const LlenadosPage = () => {
                         onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>
+
+            <ConfirmModal
+                isOpen={!!confirmar}
+                onClose={() => setConfirmar(null)}
+                onConfirm={handleEliminar}
+                title="Eliminar llenado"
+                message="¿Eliminar este llenado? Esta acción no se puede deshacer."
+                confirmLabel="Eliminar"
+            />
         </div>
     );
 };

@@ -3,8 +3,9 @@ import {
     obtenerClientes, crearCliente, actualizarCliente, eliminarCliente,
     obtenerInactivos, toggleEstadoCliente,
 } from "../services/clienteService";
-import Modal   from "../components/Modal";
-import toast   from "react-hot-toast";
+import Modal        from "../components/Modal";
+import ConfirmModal from "../components/ConfirmModal";
+import toast        from "react-hot-toast";
 import { btnPrimary, btnSecondary } from "../styles/cls";
 import { RotateCcw, Archive } from "lucide-react";
 
@@ -244,6 +245,7 @@ const ClientesPage = () => {
     const [error,          setError]          = useState(null);
     const [editando,       setEditando]       = useState(null);
     const [modalInactivos, setModalInactivos] = useState(false);
+    const [confirmarDesact,setConfirmarDesact] = useState(null); // cliente a desactivar
 
     const cargar = useCallback(async (nombre = "") => {
         try {
@@ -285,8 +287,8 @@ const ClientesPage = () => {
         }
     };
 
-    const handleDesactivar = async (cliente) => {
-        if (!window.confirm(`Desactivar a "${cliente.nombre}"?`)) return;
+    const handleDesactivar = async () => {
+        const cliente = confirmarDesact;
         const tid = toast.loading("Desactivando...");
         try {
             await eliminarCliente(cliente._id);
@@ -333,7 +335,8 @@ const ClientesPage = () => {
             {!cargando && !error && clientes.length > 0 && (
                 <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {clientes.map((c) => (
-                        <ClienteCard key={c._id} cliente={c} onEditar={setEditando} onDesactivar={handleDesactivar} />
+                        <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
+                            onDesactivar={(cli) => setConfirmarDesact(cli)} />
                     ))}
                 </div>
             )}
@@ -354,6 +357,16 @@ const ClientesPage = () => {
             <Modal isOpen={modalInactivos} onClose={() => setModalInactivos(false)} title="Clientes inactivos">
                 <ModalInactivos onReactivar={handleReactivar} />
             </Modal>
+
+            <ConfirmModal
+                isOpen={!!confirmarDesact}
+                onClose={() => setConfirmarDesact(null)}
+                onConfirm={handleDesactivar}
+                title="Desactivar cliente"
+                message={confirmarDesact ? `¿Desactivar a "${confirmarDesact.nombre}"? Lo podrás reactivar desde el panel de inactivos.` : ""}
+                confirmLabel="Desactivar"
+                type="danger"
+            />
         </div>
     );
 };

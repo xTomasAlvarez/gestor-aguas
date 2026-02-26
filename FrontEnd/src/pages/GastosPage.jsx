@@ -3,6 +3,8 @@ import { obtenerGastos, crearGasto, actualizarGasto, eliminarGasto } from "../se
 import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
+import ConfirmModal from "../components/ConfirmModal";
+import toast from "react-hot-toast";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
@@ -96,6 +98,7 @@ const GastosPage = () => {
     const [filtroTiempo, setFiltroTiempo] = useState("hoy");
     const [expanded,     setExpanded]     = useState(new Set());
     const [editando,     setEditando]     = useState(null);
+    const [confirmar,    setConfirmar]    = useState(null); // { id, nombre }
 
     const handleFiltro = (val) => { setFiltroTiempo(val); setExpanded(new Set()); };
     const toggleDia = (key) => setExpanded((p) => {
@@ -107,9 +110,11 @@ const GastosPage = () => {
         const { data } = await actualizarGasto(editando._id, form);
         actualizar(data); setEditando(null);
     };
-    const handleEliminar = async (id) => {
-        if (!window.confirm("Eliminar este gasto?")) return;
-        await eliminarGasto(id); eliminarLocal(id);
+    const handleEliminar = async () => {
+        const { id, nombre } = confirmar;
+        await eliminarGasto(id);
+        eliminarLocal(id);
+        toast.success(`"${nombre}" eliminado correctamente.`);
     };
 
     const filtrados    = filtrarPorTiempo(gastos, filtroTiempo);
@@ -147,21 +152,35 @@ const GastosPage = () => {
                 {cargando && <p className="text-center py-16 text-slate-400">Cargando...</p>}
                 {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
                 {!cargando && !error && dias.length === 0 && <p className="text-center py-16 text-slate-400">Sin registros para este periodo.</p>}
-                {!cargando && !error && dias.map((dk) => (
-                    <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}
-                        expanded={expanded.has(dk)} onToggle={toggleDia}
-                        onEditar={setEditando} onEliminar={handleEliminar} />
-                ))}
-            </div>
-
-            <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar gasto">
-                {editando && (
-                    <FormGasto
-                        inicial={{ concepto: editando.concepto, monto: editando.monto }}
-                        onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
-                )}
-            </Modal>
+                {/* Eliminar item en cada fila → pasamos setConfirmar */}
+            {!cargando && !error && dias.map((dk) => (
+                <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}
+                    expanded={expanded.has(dk)} onToggle={toggleDia}
+                    onEditar={setEditando}
+                    onEliminar={(id) => {
+                        const g = gastos.find((x) => x._id === id);
+                        setConfirmar({ id, nombre: g?.concepto || "Gasto" });
+                    }} />
+            ))}
         </div>
+
+        <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar gasto">
+            {editando && (
+                <FormGasto
+                    inicial={{ concepto: editando.concepto, monto: editando.monto }}
+                    onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
+            )}
+        </Modal>
+
+        <ConfirmModal
+            isOpen={!!confirmar}
+            onClose={() => setConfirmar(null)}
+            onConfirm={handleEliminar}
+            title="Eliminar gasto"
+            message={confirmar ? `¿Eliminar "${confirmar.nombre}"? Esta acción no se puede deshacer.` : ""}
+            confirmLabel="Eliminar"
+        />
+    </div>
     );
 };
 

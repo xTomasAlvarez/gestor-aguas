@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { listarUsuarios, toggleActivo, eliminarUsuario } from "../services/adminService";
+import ConfirmModal from "../components/ConfirmModal";
+import toast from "react-hot-toast";
 
 // ── Badge de estado ────────────────────────────────────────────────────────
 const EstadoBadge = ({ activo }) => (
@@ -28,7 +30,8 @@ const ConfigPage = () => {
     const [usuarios,  setUsuarios]  = useState([]);
     const [cargando,  setCargando]  = useState(true);
     const [error,     setError]     = useState(null);
-    const [procesando, setProcesando] = useState(null); // id del usuario siendo procesado
+    const [procesando,   setProcesando]  = useState(null);
+    const [confirmar,    setConfirmar]   = useState(null); // { id, nombre }
 
     const cargar = useCallback(async () => {
         try {
@@ -57,12 +60,13 @@ const ConfigPage = () => {
         }
     };
 
-    const handleEliminar = async (id, nombre) => {
-        if (!window.confirm(`Eliminar al usuario "${nombre}"? Esta accion no se puede deshacer.`)) return;
+    const handleEliminar = async () => {
+        const { id, nombre } = confirmar;
         setProcesando(id);
         try {
             await eliminarUsuario(id);
             setUsuarios((prev) => prev.filter((u) => u._id !== id));
+            toast.success(`Usuario "${nombre}" eliminado.`);
         } catch (err) {
             setError(err.response?.data?.message || "Error al eliminar el usuario.");
         } finally {
@@ -158,7 +162,7 @@ const ConfigPage = () => {
                                                         {ocupado ? "..." : u.activo ? "Desactivar" : "Activar"}
                                                     </button>
                                                     <button
-                                                        onClick={() => handleEliminar(u._id, u.nombre)}
+                                                        onClick={() => setConfirmar({ id: u._id, nombre: u.nombre })}
                                                         disabled={ocupado}
                                                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
                                                         Eliminar
@@ -174,8 +178,18 @@ const ConfigPage = () => {
                     )}
                 </div>
             </div>
-        </div>
+
+        <ConfirmModal
+            isOpen={!!confirmar}
+            onClose={() => setConfirmar(null)}
+            onConfirm={handleEliminar}
+            title="Eliminar usuario"
+            message={confirmar ? `¿Eliminar a "${confirmar.nombre}"? Esta acción no se puede deshacer.` : ""}
+            confirmLabel="Eliminar"
+        />
+    </div>
     );
 };
 
 export default ConfigPage;
+

@@ -4,6 +4,8 @@ import { obtenerVentas, crearVenta, actualizarVenta, anularVenta } from "../serv
 import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
+import ConfirmModal from "../components/ConfirmModal";
+import toast from "react-hot-toast";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
 import { PRODUCTOS, PROD_VACIO, METODOS_PAGO as METODOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
@@ -384,10 +386,11 @@ const VentasPage = () => {
     const { items: clientes, cargando: cargC, error: errorC } =
         useListaCrud(() => obtenerClientes().then((r) => r.data));
 
-    const [filtroTiempo, setFiltroTiempo] = useState("hoy");
-    const [expanded,     setExpanded]     = useState(new Set());
-    const [editando,     setEditando]     = useState(null);
-    const [modalCrear,   setModalCrear]   = useState(false);
+    const [filtroTiempo,    setFiltroTiempo]    = useState("hoy");
+    const [expanded,        setExpanded]        = useState(new Set());
+    const [editando,        setEditando]        = useState(null);
+    const [modalCrear,      setModalCrear]      = useState(false);
+    const [confirmarAnular, setConfirmarAnular] = useState(null); // { id }
 
     const cargando = cargV || cargC;
     const error    = errorV || errorC;
@@ -399,9 +402,11 @@ const VentasPage = () => {
 
     const handleCrear  = async (payload) => { await crearVenta(payload); await recargarVentas(); setModalCrear(false); };
     const handleEditar = async (payload) => { await actualizarVenta(editando._id, payload); await recargarVentas(); setEditando(null); };
-    const handleAnular = async (id) => {
-        if (!window.confirm("Anular esta venta? Se revertira la deuda si era fiado.")) return;
-        await anularVenta(id); await recargarVentas();
+    const handleAnular = async () => {
+        const { id } = confirmarAnular;
+        await anularVenta(id);
+        await recargarVentas();
+        toast.success("Venta anulada. La deuda fue revertida.");
     };
 
     const filtradas    = filtrarPorTiempo(ventas, filtroTiempo);
@@ -454,7 +459,8 @@ const VentasPage = () => {
                 {!cargando && !error && dias.map((dk) => (
                     <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}
                         expanded={expanded.has(dk)} onToggle={toggleDia}
-                        onEditar={setEditando} onAnular={handleAnular} />
+                        onEditar={setEditando}
+                        onAnular={(id) => setConfirmarAnular({ id })} />
                 ))}
             </div>
 
@@ -467,6 +473,15 @@ const VentasPage = () => {
                         onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>
+
+            <ConfirmModal
+                isOpen={!!confirmarAnular}
+                onClose={() => setConfirmarAnular(null)}
+                onConfirm={handleAnular}
+                title="Anular venta"
+                message="¿Anular esta venta? Si era fiado, se revertirá la deuda del cliente."
+                confirmLabel="Anular"
+            />
         </div>
     );
 };
