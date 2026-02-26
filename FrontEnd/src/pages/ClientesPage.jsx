@@ -2,7 +2,80 @@ import { useState } from "react";
 import { useCallback, useEffect } from "react";
 import { obtenerClientes, crearCliente, actualizarCliente, eliminarCliente } from "../services/clienteService";
 import Modal from "../components/Modal";
-import { inputCls, btnPrimary, btnSecondary, btnDanger } from "../styles/cls";
+import { btnPrimary, btnSecondary, btnDanger } from "../styles/cls";
+
+// ── Utilidad de teléfono ──────────────────────────────────────────────────
+// Limpia el código de área (quita el 0 inicial) y el número (quita 15 inicial)
+const limpiarArea  = (v) => v.replace(/\D/g, "").replace(/^0+/, "");
+const limpiarNum   = (v) => v.replace(/\D/g, "").replace(/^15/, "");
+// Arma el string internacional final: ej. 549381XXXXXXX
+const armarTelefono = (prefijo, area, numero) => {
+    const p = prefijo.replace(/\D/g, "");          // "549"
+    const a = limpiarArea(area);
+    const n = limpiarNum(numero);
+    if (!a && !n) return "";
+    return `${p}${a}${n}`;
+};
+
+// ── Componente de campo de teléfono ───────────────────────────────────────
+const PREFIJOS = [
+    { value: "549",  label: "+54 9 (AR movil)" },
+    { value: "54",   label: "+54 (AR fijo)"    },
+    { value: "598",  label: "+598 (UY)"         },
+    { value: "591",  label: "+591 (BO)"         },
+];
+
+const TelInput = ({ value, onChange }) => {
+    // value llega como string raw "5493811234567" o ""
+    // Necesitamos descomponerlo para mostrarlo en los campos
+    const [prefijo, setPrefijo] = useState("549");
+    const [area,    setArea]    = useState("381");
+    const [numero,  setNumero]  = useState("");
+
+    // Al activar edición con valor existente, rellenar los campos
+    useEffect(() => {
+        if (value && value.length > 3) {
+            // Intentamos extraer: prefijo conocido + área 3 dígitos + resto
+            for (const pref of PREFIJOS) {
+                if (value.startsWith(pref.value)) {
+                    const resto = value.slice(pref.value.length);
+                    setPrefijo(pref.value);
+                    setArea(resto.slice(0, 3));
+                    setNumero(resto.slice(3));
+                    return;
+                }
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);  // solo al montar
+
+    const actualizar = (p, a, n) => {
+        onChange(armarTelefono(p, a, n));
+    };
+
+    const inputSm = "px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-sm";
+
+    return (
+        <div className="flex gap-2 items-center">
+            {/* Prefijo país */}
+            <select value={prefijo}
+                onChange={(e) => { setPrefijo(e.target.value); actualizar(e.target.value, area, numero); }}
+                className={`${inputSm} w-36 flex-shrink-0`}>
+                {PREFIJOS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            {/* Código de área */}
+            <input type="text" inputMode="numeric" maxLength={4}
+                value={area} placeholder="Área"
+                onChange={(e) => { const v = limpiarArea(e.target.value); setArea(v); actualizar(prefijo, v, numero); }}
+                className={`${inputSm} w-20 flex-shrink-0`} />
+            {/* Número */}
+            <input type="text" inputMode="numeric" maxLength={10}
+                value={numero} placeholder="Número"
+                onChange={(e) => { const v = limpiarNum(e.target.value); setNumero(v); actualizar(prefijo, area, v); }}
+                className={`${inputSm} flex-1 min-w-0`} />
+        </div>
+    );
+};
 
 // ── Formulario ────────────────────────────────────────────────────────────
 const FORM_VACIO = { nombre: "", direccion: "", telefono: "" };
@@ -14,6 +87,10 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
     const handleChange = (e) => {
         setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+        setError(null);
+    };
+    const handleTelChange = (tel) => {
+        setForm((p) => ({ ...p, telefono: tel }));
         setError(null);
     };
 
@@ -31,13 +108,26 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
         }
     };
 
+    const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-sm";
+
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre *"  className={inputCls} />
-                <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Dirección" className={inputCls} />
-                <input name="telefono"  value={form.telefono}  onChange={handleChange} placeholder="Teléfono"  className={inputCls} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre *"   className={inputCls} />
+                <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Direccion"  className={inputCls} />
             </div>
+
+            {/* Campo de teléfono dividido */}
+            <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Telefono</p>
+                <TelInput value={form.telefono} onChange={handleTelChange} />
+                {form.telefono && (
+                    <p className="text-xs text-slate-400 mt-1">
+                        Numero internacional: <span className="font-mono text-slate-600">+{form.telefono}</span>
+                    </p>
+                )}
+            </div>
+
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>}
             <div className="flex gap-2">
                 <button type="submit" disabled={enviando} className={btnPrimary}>
@@ -55,13 +145,18 @@ const ClienteCard = ({ cliente, onEditar, onEliminar }) => {
     const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
     const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo_pendiente > 0;
 
+    // Formatear teléfono para mostrar (agrupa dígitos)
+    const telDisplay = telefono
+        ? `+${telefono.slice(0,2)} ${telefono.slice(2,5)} ${telefono.slice(5,8)}-${telefono.slice(8)}`
+        : null;
+
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between gap-2">
                 <div>
                     <h2 className="text-base font-bold text-slate-800 leading-tight">{nombre}</h2>
-                    {direccion && <p className="text-sm text-slate-500 mt-0.5">{direccion}</p>}
-                    {telefono  && <a href={`tel:${telefono}`} className="text-sm text-blue-600 hover:underline mt-0.5 block">{telefono}</a>}
+                    {direccion   && <p className="text-sm text-slate-500 mt-0.5">{direccion}</p>}
+                    {telDisplay  && <a href={`tel:+${telefono}`} className="text-sm text-blue-600 hover:underline mt-0.5 block font-mono">{telDisplay}</a>}
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${
                     tieneDeuda ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
@@ -129,23 +224,12 @@ const ClientesPage = () => {
         return () => clearTimeout(t);
     }, [busqueda, cargar]);
 
-    const handleCrear  = async (form) => {
-        const { data } = await crearCliente(form);
-        setClientes((p) => [data, ...p]);
-    };
-    const handleEditar = async (form) => {
-        const { data } = await actualizarCliente(editando._id, form);
-        setClientes((p) => p.map((c) => (c._id === data._id ? data : c)));
-        setEditando(null);
-    };
-    const handleEliminar = async (id) => {
-        if (!window.confirm("Desactivar este cliente?")) return;
-        await eliminarCliente(id);
-        setClientes((p) => p.filter((c) => c._id !== id));
-    };
+    const handleCrear    = async (form) => { const { data } = await crearCliente(form);                    setClientes((p) => [data, ...p]); };
+    const handleEditar   = async (form) => { const { data } = await actualizarCliente(editando._id, form); setClientes((p) => p.map((c) => (c._id === data._id ? data : c))); setEditando(null); };
+    const handleEliminar = async (id)   => { if (!window.confirm("Desactivar este cliente?")) return; await eliminarCliente(id); setClientes((p) => p.filter((c) => c._id !== id)); };
 
     return (
-        <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
+        <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
             <div className="max-w-6xl mx-auto mb-6">
                 <h1 className="text-2xl font-extrabold text-slate-800">Clientes</h1>
                 <p className="text-sm text-slate-500 mt-1">Administracion de clientes activos.</p>
