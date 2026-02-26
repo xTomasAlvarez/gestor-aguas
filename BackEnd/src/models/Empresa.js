@@ -18,4 +18,7 @@ empresaSchema.pre("save", function () {
     }
 });
 
+// Static para usar desde otros módulos
+empresaSchema.statics.generarCodigo = generarCodigo;
+
 export default mongoose.model("Empresa", empresaSchema);

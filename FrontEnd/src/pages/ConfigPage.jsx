@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { listarUsuarios, toggleActivo, eliminarUsuario, obtenerEmpresa } from "../services/adminService";
+import { listarUsuarios, toggleActivo, eliminarUsuario, obtenerEmpresa, crearEmpresa, regenerarCodigo } from "../services/adminService";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 
@@ -34,6 +34,10 @@ const ConfigPage = () => {
     const [confirmar,    setConfirmar]   = useState(null); // { id, nombre }
     const [empresa,      setEmpresa]     = useState(null); // { nombre, codigoVinculacion }
     const [copiado,      setCopiado]     = useState(false);
+    const [confirmarRegen,     setConfirmarRegen]     = useState(false);
+    const [regenCargando,      setRegenCargando]      = useState(false);
+    const [nombreEmpresaForm,  setNombreEmpresaForm]  = useState("");
+    const [creandoEmpresa,     setCreandoEmpresa]     = useState(false);
 
     const cargar = useCallback(async () => {
         try {
@@ -60,6 +64,36 @@ const ConfigPage = () => {
         if (!empresa?.codigoVinculacion) return;
         navigator.clipboard.writeText(empresa.codigoVinculacion)
             .then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); });
+    };
+
+    const handleRegenerarCodigo = async () => {
+        setRegenCargando(true);
+        try {
+            const { data } = await regenerarCodigo();
+            setEmpresa(data);
+            setCopiado(false);
+            toast.success("Nuevo código generado correctamente.");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Error al regenerar el código.");
+        } finally {
+            setRegenCargando(false);
+        }
+    };
+
+    const handleCrearEmpresa = async (e) => {
+        e.preventDefault();
+        if (!nombreEmpresaForm.trim()) return toast.error("Ingresá un nombre para la empresa.");
+        setCreandoEmpresa(true);
+        try {
+            const { data } = await crearEmpresa(nombreEmpresaForm.trim());
+            setEmpresa(data);
+            setNombreEmpresaForm("");
+            toast.success(`Empresa “${data.nombre}” creada correctamente.`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Error al crear la empresa.");
+        } finally {
+            setCreandoEmpresa(false);
+        }
     };
 
     const handleToggle = async (id) => {
@@ -109,13 +143,23 @@ const ConfigPage = () => {
                     <p className="text-sm text-slate-500 mt-1">Gestion de personal y accesos al sistema</p>
                 </div>
 
-                {/* Panel código de vinculación (solo admin con empresa) */}
-                {empresa && (
+                {/* Panel empresa */}
+                {empresa ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5 mb-6">
-                        <h2 className="text-base font-bold text-slate-800">Código de vinculación</h2>
-                        <p className="text-xs text-slate-400 mt-0.5 mb-4">
-                            Compartí este código con tus empleados para que se registren en <span className="font-semibold">{empresa.nombre}</span>
-                        </p>
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                            <div>
+                                <h2 className="text-base font-bold text-slate-800">Código de vinculación</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                    Compartí este código con tus empleados para que se registren en <span className="font-semibold">{empresa.nombre}</span>
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setConfirmarRegen(true)}
+                                disabled={regenCargando}
+                                className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50">
+                                {regenCargando ? "Generando..." : "Generar nuevo"}
+                            </button>
+                        </div>
                         <div className="flex items-center gap-3">
                             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-center">
                                 <span className="text-2xl font-extrabold tracking-widest text-slate-800 font-mono">{empresa.codigoVinculacion}</span>
@@ -128,6 +172,37 @@ const ConfigPage = () => {
                                 }`}>
                                 {copiado ? "¡Copiado!" : "Copiar"}
                             </button>
+                        </div>
+                    </div>
+                ) : (
+                    /* Admin existente sin empresa: panel de configuración inicial */
+                    <div className="bg-white rounded-2xl shadow-sm border border-blue-200 px-6 py-5 mb-6">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} className="w-5 h-5 text-blue-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h2 className="text-base font-bold text-slate-800">Configurá tu empresa</h2>
+                                <p className="text-xs text-slate-500 mt-0.5 mb-4">
+                                    Tu cuenta aún no tiene una empresa asignada. Creála ahora para obtener el código de vinculación para tus empleados.
+                                </p>
+                                <form onSubmit={handleCrearEmpresa} className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={nombreEmpresaForm}
+                                        onChange={(e) => setNombreEmpresaForm(e.target.value)}
+                                        placeholder="Nombre de tu empresa"
+                                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                                    />
+                                    <button type="submit" disabled={creandoEmpresa}
+                                        className="px-4 py-2 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-bold rounded-xl text-sm transition-colors">
+                                        {creandoEmpresa ? "Creando..." : "Crear"}
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -223,6 +298,17 @@ const ConfigPage = () => {
             title="Eliminar usuario"
             message={confirmar ? `¿Eliminar a "${confirmar.nombre}"? Esta acción no se puede deshacer.` : ""}
             confirmLabel="Eliminar"
+        />
+
+        <ConfirmModal
+            isOpen={confirmarRegen}
+            onClose={() => setConfirmarRegen(false)}
+            onConfirm={handleRegenerarCodigo}
+            title="Generar nuevo código"
+            message="Al generar un nuevo código, el anterior dejará de funcionar para nuevos registros. Los empleados ya vinculados no se verán afectados."
+            type="primary"
+            confirmLabel="Generar"
+            cancelLabel="Cancelar"
         />
     </div>
     );
