@@ -122,53 +122,52 @@ const ConfigPage = () => {
                                 const ocupado = procesando === u._id;
 
                                 return (
-                                    <li key={u._id} className="px-6 py-4 flex items-center gap-4">
+                                    <li key={u._id} className="px-4 sm:px-6 py-4 flex items-start gap-3">
                                         {/* Avatar */}
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                                             <span className="text-sm font-bold text-blue-700">
                                                 {u.nombre.charAt(0).toUpperCase()}
                                             </span>
                                         </div>
 
-                                        {/* Info */}
+                                        {/* Contenedor principal — crece y se envuelve */}
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
+                                            {/* Fila 1: nombre + badges */}
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                                 <p className="text-sm font-semibold text-slate-800 truncate">{u.nombre}</p>
                                                 <RolBadge rol={u.rol} />
+                                                <EstadoBadge activo={u.activo} />
                                                 {esSelf && (
                                                     <span className="text-xs text-slate-400">(tu cuenta)</span>
                                                 )}
                                             </div>
+                                            {/* Email */}
                                             <p className="text-xs text-slate-400 mt-0.5 truncate">{u.email}</p>
+
+                                            {/* Fila 2: botones — solo para otros usuarios */}
+                                            {!esSelf && (
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <button
+                                                        onClick={() => handleToggle(u._id)}
+                                                        disabled={ocupado}
+                                                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
+                                                            u.activo
+                                                                ? "border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                                : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                                        }`}>
+                                                        {ocupado ? "..." : u.activo ? "Desactivar" : "Activar"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEliminar(u._id, u.nombre)}
+                                                        disabled={ocupado}
+                                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-
-                                        {/* Estado */}
-                                        <EstadoBadge activo={u.activo} />
-
-                                        {/* Acciones */}
-                                        {!esSelf && (
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <button
-                                                    onClick={() => handleToggle(u._id)}
-                                                    disabled={ocupado}
-                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
-                                                        u.activo
-                                                            ? "border-amber-300 text-amber-700 hover:bg-amber-50"
-                                                            : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                                                    }`}
-                                                >
-                                                    {ocupado ? "..." : u.activo ? "Desactivar" : "Activar"}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEliminar(u._id, u.nombre)}
-                                                    disabled={ocupado}
-                                                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                                                >
-                                                    Eliminar
-                                                </button>
-                                            </div>
-                                        )}
                                     </li>
+
                                 );
                             })}
                         </ul>
