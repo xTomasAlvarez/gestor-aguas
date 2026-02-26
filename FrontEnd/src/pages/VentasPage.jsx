@@ -7,12 +7,12 @@ import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
-import { PRODUCTOS, PROD_VACIO, METODOS_PAGO as METODOS } from "../utils/productos";
+import { METODOS_PAGO as METODOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
+import { useConfig } from "../context/ConfigContext";
 
 // ── Constantes ────────────────────────────────────────────────────────────
 const hoy = () => new Date().toISOString().slice(0, 10);
-const FORM_VACIO = { cliente: "", metodo_pago: "efectivo", descuento: 0, productos: { ...PROD_VACIO }, monto_pagado: "", esCobranza: false, fecha: hoy() };
 
 // Helpers
 const calcItems = (prods) =>
@@ -28,9 +28,14 @@ const calcItems = (prods) =>
 const calcTotal = (prods, descuento) =>
     calcItems(prods).reduce((a, i) => a + i.subtotal, 0) - Number(descuento || 0);
 
-const ventaToForm = (v) => {
-    const prods = JSON.parse(JSON.stringify(PROD_VACIO));
+const ventaToForm = (v, catProductos) => {
+    // Generamos un dicccionario base basado en el catálogo actual
+    const prods = {};
+    catProductos.forEach(p => { prods[p.key] = { cantidad: 0, precio_unitario: p.precioDefault }; });
+    
+    // Y pisamos con lo que la venta realmente guardó
     v.items.forEach(({ producto, cantidad, precio_unitario }) => { prods[producto] = { cantidad, precio_unitario }; });
+    
     return {
         cliente:      v.cliente?._id || v.cliente,
         metodo_pago:  v.metodo_pago,
@@ -38,6 +43,7 @@ const ventaToForm = (v) => {
         productos:    prods,
         monto_pagado: v.monto_pagado ?? "",
         esCobranza:   v.items.length === 0,
+        fecha:        formatFecha(v.fecha).split('/').reverse().join('-') // asume YYYY-MM-DD para input date si formatFecha devuelve string, en este caso vamos a usar un format directo para date
     };
 };
 
@@ -126,8 +132,15 @@ const ClienteSearch = ({ clientes, value, onChange }) => {
 };
 
 // ── Formulario de venta ───────────────────────────────────────────────────
-const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
-    const [form,     setForm]     = useState(inicial);
+const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, esEdicion = false }) => {
+    // Generar un estado por default basado en los productos dinámicos
+    const defaultProductos = {};
+    productosBase.forEach(p => { defaultProductos[p.key] = { cantidad: 0, precio_unitario: p.precioDefault }; });
+    
+    const [form, setForm] = useState(inicial || { 
+        cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoy() 
+    });
+
     const [enviando, setEnviando] = useState(false);
     const [error,    setError]    = useState(null);
 
@@ -162,7 +175,9 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                 monto_pagado: montoPagadoEfectivo,
                 fecha:        form.fecha,
             });
-            if (!esEdicion) setForm(FORM_VACIO);
+            if (!esEdicion) {
+                setForm({ cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoy() });
+            }
         } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
     };
@@ -181,7 +196,7 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
             {/* Toggle modo cobranza */}
             {!esEdicion && (
                 <button type="button"
-                    onClick={() => setForm((p) => ({ ...FORM_VACIO, cliente: p.cliente, esCobranza: !p.esCobranza }))}
+                    onClick={() => setForm((p) => ({ cliente: p.cliente, metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", fecha: hoy(), esCobranza: !p.esCobranza }))}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-colors ${
                         esCobranza
                             ? "bg-emerald-50 border-emerald-300 text-emerald-800"
@@ -218,8 +233,9 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                 <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Productos</p>
                     <div className="flex flex-col gap-2">
-                        {PRODUCTOS.map(({ key, label }) => {
-                            const cant = Number(form.productos[key].cantidad);
+                        {productosBase.map(({ key, label }) => {
+                            const prodState = form.productos[key] || { cantidad: 0, precio_unitario: 0 };
+                            const cant = Number(prodState.cantidad);
                             return (
                                 <div key={key} className="bg-slate-50 rounded-xl px-4 py-3">
                                     <div className="flex items-center justify-between gap-2">
@@ -238,10 +254,10 @@ const FormVenta = ({ clientes, inicial = FORM_VACIO, onGuardar, onCancelar, esEd
                                         <div className="mt-2 flex items-center gap-2">
                                             <span className="text-xs text-slate-400">Precio unit.</span>
                                             <input type="number" inputMode="numeric" min="0"
-                                                value={form.productos[key].precio_unitario}
+                                                value={prodState.precio_unitario}
                                                 onChange={(e) => setProd(key, "precio_unitario", e.target.value)}
                                                 className="w-28 text-center px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-                                            <span className="text-xs text-slate-500">= {formatPeso(cant * Number(form.productos[key].precio_unitario))}</span>
+                                            <span className="text-xs text-slate-500">= {formatPeso(cant * Number(prodState.precio_unitario))}</span>
                                         </div>
                                     )}
                                 </div>
@@ -381,6 +397,9 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onAnular })
 
 // ── Página principal ──────────────────────────────────────────────────────
 const VentasPage = () => {
+    const { config } = useConfig();
+    const productosBase = config?.productos || [];
+
     const { items: ventas,   cargando: cargV, error: errorV, cargar: recargarVentas } =
         useListaCrud(() => obtenerVentas().then((r) => r.data));
     const { items: clientes, cargando: cargC, error: errorC } =
@@ -465,11 +484,11 @@ const VentasPage = () => {
             </div>
 
             <Modal isOpen={modalCrear} onClose={() => setModalCrear(false)} title="Nueva venta" maxWidth="max-w-xl">
-                <FormVenta clientes={clientes} onGuardar={handleCrear} onCancelar={() => setModalCrear(false)} />
+                <FormVenta clientes={clientes} productosBase={productosBase} onGuardar={handleCrear} onCancelar={() => setModalCrear(false)} />
             </Modal>
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar venta" maxWidth="max-w-xl">
                 {editando && (
-                    <FormVenta clientes={clientes} inicial={ventaToForm(editando)}
+                    <FormVenta clientes={clientes} productosBase={productosBase} inicial={ventaToForm(editando, productosBase)}
                         onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>

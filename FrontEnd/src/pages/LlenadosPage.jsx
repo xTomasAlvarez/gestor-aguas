@@ -6,20 +6,19 @@ import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
-import { PRODUCTOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
-
-const CANT_VACIO = Object.fromEntries(PRODUCTOS.map((p) => [p.key, 0]));
-
+import { useConfig } from "../context/ConfigContext";
 
 // Conversores form ↔ modelo
-const llenadoToForm = (l) => {
-    const cantidades = { ...CANT_VACIO };
+const llenadoToForm = (l, catProductos) => {
+    const cantidades = {};
+    catProductos.forEach(p => { cantidades[p.key] = 0; });
     l.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
-    return { cantidades, costo_total: l.costo_total ?? "" };
+    return { cantidades, costo_total: l.costo_total ?? "", fecha: l.fecha ? l.fecha.split("T")[0] : hoy() };
 };
-const formToPayload = ({ cantidades, costo_total, fecha }) => ({
-    productos: PRODUCTOS
+
+const formToPayload = ({ cantidades, costo_total, fecha }, catProductos) => ({
+    productos: catProductos
         .filter(({ key }) => Number(cantidades[key]) > 0)
         .map(({ key }) => ({ producto: key, cantidad: Number(cantidades[key]) })),
     ...(costo_total !== "" && { costo_total: Number(costo_total) }),
@@ -28,7 +27,6 @@ const formToPayload = ({ cantidades, costo_total, fecha }) => ({
 
 // ── Formulario ────────────────────────────────────────────────────────────
 const hoy = () => new Date().toISOString().slice(0, 10);
-const FORM_VACIO = { cantidades: { ...CANT_VACIO }, costo_total: "", fecha: hoy() };
 
 // Stepper táctil: fila con label a la izq y controles a la der
 const Stepper = ({ label, value, onChange }) => (
@@ -62,8 +60,11 @@ const Stepper = ({ label, value, onChange }) => (
     </div>
 );
 
-const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
-    const [form, setForm]         = useState(inicial);
+const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdicion = false }) => {
+    const defaultCantidades = {};
+    envaseConfig.forEach(p => { defaultCantidades[p.key] = 0; });
+
+    const [form, setForm]         = useState(inicial || { cantidades: defaultCantidades, costo_total: "", fecha: hoy() });
     const [enviando, setEnviando] = useState(false);
     const [error, setError]       = useState(null);
 
@@ -72,10 +73,13 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(null);
-        const payload = formToPayload(form);
+        const payload = formToPayload(form, envaseConfig);
         if (!payload.productos.length) return setError("Ingresa al menos un producto.");
         setEnviando(true);
-        try { await onGuardar(payload); if (!esEdicion) setForm(FORM_VACIO); }
+        try { 
+            await onGuardar(payload); 
+            if (!esEdicion) setForm({ cantidades: defaultCantidades, costo_total: "", fecha: hoy() }); 
+        }
         catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
     };
@@ -92,9 +96,9 @@ const FormLlenado = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Unidades a cargar</p>
                 {/* Mobile: 1 columna full con steppers en fila. sm+: 3 columnas */}
                 <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
-                    {PRODUCTOS.map(({ key, label }) => (
+                    {envaseConfig.map(({ key, label }) => (
                         <Stepper key={key} label={label}
-                            value={form.cantidades[key]}
+                            value={form.cantidades[key] || 0}
                             onChange={(v) => setCantidad(key, v)} />
                     ))}
                 </div>
@@ -172,6 +176,9 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
 
 // ── Página principal ──────────────────────────────────────────────────────
 const LlenadosPage = () => {
+    const { config } = useConfig();
+    const productosBase = config?.productos || [];
+
     const { items: llenados, cargando, error, agregar, actualizar, eliminar: eliminarLocal } =
         useListaCrud(() => obtenerLlenados().then((r) => r.data));
 
@@ -213,8 +220,8 @@ const LlenadosPage = () => {
                 <p className="text-sm text-slate-500 mt-1">Registro de cargas de la camioneta.</p>
             </div>
 
-            <div className="max-w-3xl mx-auto grid grid-cols-3 gap-3 mb-6">
-                {PRODUCTOS.map(({ key, label }) => (
+            <div className="max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                {productosBase.map(({ key, label }) => (
                     <div key={key} className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4 text-center">
                         <p className="text-2xl font-extrabold text-slate-800">{acumulado[key] || 0}</p>
                         <p className="text-xs text-slate-400 uppercase tracking-wider mt-1 capitalize">{labelCorto}</p>
@@ -225,7 +232,7 @@ const LlenadosPage = () => {
 
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Registrar carga</h2>
-                <FormLlenado onGuardar={handleCrear} />
+                <FormLlenado envaseConfig={productosBase} onGuardar={handleCrear} />
             </div>
 
             <div className="max-w-3xl mx-auto flex items-center justify-between mb-4">
@@ -249,7 +256,7 @@ const LlenadosPage = () => {
 
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar llenado">
                 {editando && (
-                    <FormLlenado inicial={llenadoToForm(editando)}
+                    <FormLlenado envaseConfig={productosBase} inicial={llenadoToForm(editando, productosBase)}
                         onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
                 )}
             </Modal>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider }     from "./context/AuthContext";
+import { ConfigProvider }   from "./context/ConfigContext";
 import ProtectedRoute       from "./components/ProtectedRoute";
 import Navbar               from "./components/Navbar";
 import OfflineIndicator     from "./components/OfflineIndicator";
@@ -19,10 +20,12 @@ import SuperAdminPage    from "./pages/SuperAdminPage";
 // Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página
 const Privada = ({ children }) => (
     <ProtectedRoute>
-        <Navbar />
-        <div className="pb-20 sm:pb-0">
-            {children}
-        </div>
+        <ConfigProvider>
+            <Navbar />
+            <div className="pb-20 sm:pb-0">
+                {children}
+            </div>
+        </ConfigProvider>
     </ProtectedRoute>
 );
 
