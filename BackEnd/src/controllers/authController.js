@@ -72,8 +72,7 @@ export const registrar = async (req, res) => {
         });
 
         return res.status(201).json({
-            message: `Empresa "${empresa.nombre}" creada. Sesión iniciada automáticamente.`,
-            token: generarToken(usuario._id),
+            message: `Empresa "${empresa.nombre}" creada. Ya podés iniciar sesión.`,
             codigoVinculacion: empresa.codigoVinculacion,
             usuario: usuarioSeguro(usuario),
         });

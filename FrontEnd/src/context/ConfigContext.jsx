@@ -11,6 +11,7 @@ export const ConfigProvider = ({ children }) => {
         logo: null,
         telefono: null,
         productos: [],
+        onboardingCompletado: false,
         cargando: true
     });
 
@@ -30,6 +31,7 @@ export const ConfigProvider = ({ children }) => {
                         logo:      data.logo || null,
                         telefono:  data.telefono || null,
                         productos: data.productos || [],
+                        onboardingCompletado: data.onboardingCompletado || false,
                         cargando: false
                     });
                 }
@@ -51,6 +53,7 @@ export const ConfigProvider = ({ children }) => {
                 logo:      data.logo || null,
                 telefono:  data.telefono || null,
                 productos: data.productos || [],
+                onboardingCompletado: data.onboardingCompletado || false,
                 cargando: false
             });
         } catch (error) {

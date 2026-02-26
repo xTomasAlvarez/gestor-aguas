@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registrarService } from "../services/authService";
-import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, User, KeyRound, Building2 } from "lucide-react";
 
@@ -13,7 +12,6 @@ const MODOS = {
 
 const RegisterPage = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
 
     const [modo,      setModo]      = useState(null);          // null = pantalla de selección
     const [form,      setForm]      = useState({
@@ -51,14 +49,7 @@ const RegisterPage = () => {
 
             const { data } = await registrarService(payload);
             toast.dismiss(tid);
-            
-            if (modo === MODOS.admin && data.token) {
-                login(data); // Iniciar sesión auto
-                toast.success("Cuenta admin creada. Redirigiendo...");
-                navigate("/clientes", { replace: true });
-            } else {
-                setPendiente({ modo, message: data.message, codigo: data.codigoVinculacion });
-            }
+            setPendiente({ modo, message: data.message, codigo: data.codigoVinculacion });
         } catch (err) {
             toast.error(err.response?.data?.message || "Error al registrarse.", { id: tid });
         } finally {
