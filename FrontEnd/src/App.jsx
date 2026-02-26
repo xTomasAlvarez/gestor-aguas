@@ -13,6 +13,7 @@ import GastosPage        from "./pages/GastosPage";
 import DashboardPage     from "./pages/DashboardPage";
 import ConfigPage        from "./pages/ConfigPage";
 import BroadcastPage     from "./pages/BroadcastPage";
+import SuspendedPage     from "./pages/SuspendedPage";
 
 // Wrapper que aplica el layout (Navbar) + ProtectedRoute a una página
 const Privada = ({ children }) => (
@@ -30,8 +31,9 @@ const App = () => (
             <OfflineIndicator />
             <Routes>
                 {/* Rutas públicas */}
-                <Route path="/login"    element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/login"       element={<LoginPage />} />
+                <Route path="/register"    element={<RegisterPage />} />
+                <Route path="/suspended"   element={<SuspendedPage />} />
 
                 {/* Rutas privadas */}
                 <Route path="/"          element={<Navigate to="/clientes" replace />} />

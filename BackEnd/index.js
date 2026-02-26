@@ -13,6 +13,8 @@ import gastosRoutes   from "./src/routes/gastosRoutes.js";
 import llenadoRoutes  from "./src/routes/llenadoRoutes.js";
 import statsRoutes    from "./src/routes/statsRoutes.js";
 import adminRoutes    from "./src/routes/adminRoutes.js";
+import { proteger }   from "./src/middleware/authMiddleware.js";
+import { checkStatus } from "./src/middleware/checkStatus.js";
 
 // ── Variables de entorno ───────────────────────────────────────────────────
 const PORT   = process.env.PORT   || 3005;
@@ -32,14 +34,16 @@ app.use(cors({
 // ── Conexión a la Base de Datos ────────────────────────────────────────────
 dbConect(DB_URI);
 
-// ── Rutas de la API ────────────────────────────────────────────────────────
-app.use("/api/auth",     authRoutes);
-app.use("/api/clientes", clientesRoutes);
-app.use("/api/ventas",   ventasRoutes);
-app.use("/api/gastos",    gastosRoutes);
-app.use("/api/llenados",  llenadoRoutes);
-app.use("/api/stats",     statsRoutes);
-app.use("/api/admin",     adminRoutes);
+// ── Rutas de la API ──────────────────────────────────────────────
+app.use("/api/auth",     authRoutes);                             // pública
+
+// Middleware global: autenticación + check de suspensión para todas las rutas protegidas
+app.use("/api/clientes",  proteger, checkStatus, clientesRoutes);
+app.use("/api/ventas",    proteger, checkStatus, ventasRoutes);
+app.use("/api/gastos",    proteger, checkStatus, gastosRoutes);
+app.use("/api/llenados",  proteger, checkStatus, llenadoRoutes);
+app.use("/api/stats",     proteger, checkStatus, statsRoutes);
+app.use("/api/admin",     proteger, checkStatus, adminRoutes);
 
 // ── Arranque del servidor ──────────────────────────────────────────────────
 app.listen(PORT, () => {

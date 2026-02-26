@@ -9,6 +9,7 @@ const generarCodigo = () => {
 const empresaSchema = new mongoose.Schema({
     nombre:             { type: String, required: true, trim: true },
     codigoVinculacion:  { type: String, unique: true, uppercase: true, trim: true },
+    suspendida:         { type: Boolean, default: false },
 }, { timestamps: true, versionKey: false });
 
 // Auto-genera el código antes de la primera inserción

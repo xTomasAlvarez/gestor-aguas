@@ -18,8 +18,19 @@ export const setLogoutFn = (fn) => { _logoutFn = fn; };
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Solo actuar si había token — evita loop en la pantalla de login
+        const status  = error.response?.status;
+        const data    = error.response?.data;
+
+        // Empresa suspendida → redirigir a pantalla de bloqueo
+        if (status === 403 && data?.code === "EMPRESA_SUSPENDIDA") {
+            if (window.location.pathname !== "/suspended") {
+                window.location.href = "/suspended";
+            }
+            return Promise.reject(error);
+        }
+
+        // Token expirado → limpiar sesión y volver al login
+        if (status === 401) {
             const tieneToken = !!localStorage.getItem("token");
             if (tieneToken) {
                 localStorage.removeItem("token");
@@ -34,5 +45,6 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
 
 export default api;
