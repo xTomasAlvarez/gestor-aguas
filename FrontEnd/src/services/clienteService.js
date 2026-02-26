@@ -19,3 +19,13 @@ export const actualizarCliente = (id, datos) => api.put(`${BASE}/${id}`, datos);
 
 // ── Soft-delete: desactivar un cliente ────────────────────────────────────
 export const eliminarCliente = (id) => api.delete(`${BASE}/${id}`);
+
+// ── Obtener clientes inactivos (acepta ?nombre= para filtrar) ─────────────
+export const obtenerInactivos = (nombre = "") => {
+    const params = nombre ? { nombre } : {};
+    return api.get(`${BASE}/inactivos`, { params });
+};
+
+// ── Toggle activo/inactivo ─────────────────────────────────────────────────
+export const toggleEstadoCliente = (id) => api.patch(`${BASE}/${id}/estado`);
+

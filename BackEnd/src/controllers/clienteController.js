@@ -1,6 +1,32 @@
 import Cliente from "../models/Cliente.js";
 import Venta   from "../models/Venta.js";
 
+// ── GET /api/clientes/inactivos ────────────────────────────────────────────
+export const obtenerInactivos = async (req, res) => {
+    try {
+        const { nombre } = req.query;
+        const filtro = { activo: false };
+        if (nombre) filtro.nombre = { $regex: nombre, $options: "i" };
+        const clientes = await Cliente.find(filtro).sort({ nombre: 1 }).lean();
+        res.status(200).json(clientes);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener clientes inactivos.", error: error.message });
+    }
+};
+
+// ── PATCH /api/clientes/:id/estado ────────────────────────────────────────
+export const toggleEstado = async (req, res) => {
+    try {
+        const cliente = await Cliente.findById(req.params.id);
+        if (!cliente) return res.status(404).json({ message: "Cliente no encontrado." });
+        cliente.activo = !cliente.activo;
+        await cliente.save();
+        res.status(200).json({ message: `Cliente ${cliente.activo ? "activado" : "desactivado"} correctamente.`, cliente });
+    } catch (error) {
+        res.status(500).json({ message: "Error al cambiar el estado del cliente.", error: error.message });
+    }
+};
+
 // ── POST /api/clientes ─────────────────────────────────────────────────────
 // Regla: Bloquear si ya existe el mismo teléfono o la misma combinación nombre+dirección
 export const crearCliente = async (req, res) => {
