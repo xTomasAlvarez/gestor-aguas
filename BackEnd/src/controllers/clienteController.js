@@ -33,8 +33,12 @@ export const toggleEstado = async (req, res) => {
 // ── POST /api/clientes ─────────────────────────────────────────────────────
 export const crearCliente = async (req, res) => {
     try {
-        const { nombre, direccion, telefono } = req.body;
+        let { nombre, direccion, telefono } = req.body;
         const businessId = biz(req);
+
+        nombre = nombre?.trim();
+        direccion = direccion?.trim() || null;
+        telefono = telefono?.trim() || null;
 
         // Anti-duplicados DENTRO de la misma empresa
         const condicionesDuplicado = [{ nombre, direccion, businessId }];
@@ -43,13 +47,17 @@ export const crearCliente = async (req, res) => {
         const clienteExistente = await Cliente.findOne({ $or: condicionesDuplicado });
         if (clienteExistente) {
             return res.status(400).json({
-                message: "Ya existe un cliente con ese teléfono o con la misma combinación de nombre y dirección.",
+                message: "Ya existe un cliente con ese teléfono o con el mismo nombre y dirección.",
             });
         }
 
-        const nuevoCliente = await Cliente.create({ ...req.body, businessId });
+        const data = { ...req.body, nombre, direccion, telefono, businessId };
+        const nuevoCliente = await Cliente.create(data);
         res.status(201).json(nuevoCliente);
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Teléfono o dirección duplicados en la base de datos." });
+        }
         res.status(500).json({ message: "Error al crear el cliente.", error: error.message });
     }
 };
@@ -101,14 +109,22 @@ export const obtenerClientePorId = async (req, res) => {
 // ── PUT /api/clientes/:id ──────────────────────────────────────────────────
 export const actualizarCliente = async (req, res) => {
     try {
+        const data = { ...req.body };
+        if (data.direccion !== undefined) data.direccion = data.direccion?.trim() || null;
+        if (data.telefono !== undefined) data.telefono = data.telefono?.trim() || null;
+        if (data.nombre !== undefined) data.nombre = data.nombre?.trim();
+
         const clienteActualizado = await Cliente.findOneAndUpdate(
             { _id: req.params.id, businessId: biz(req) },
-            req.body,
+            data,
             { new: true, runValidators: true }
         );
         if (!clienteActualizado) return res.status(404).json({ message: "Cliente no encontrado." });
         res.status(200).json(clienteActualizado);
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Teléfono o dirección duplicados en la base de datos." });
+        }
         res.status(500).json({ message: "Error al actualizar el cliente.", error: error.message });
     }
 };

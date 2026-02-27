@@ -58,18 +58,18 @@ const clienteSchema = new Schema(
 );
 
 // ── Índice compuesto para anti-duplicados (nombre + dirección) ─────────────
-// Permite null en direccion, solo bloquea duplicados cuando AMBOS coinciden
+// Permite null en direccion, solo bloquea duplicados cuando AMBOS coinciden dentro de la misma empresa
 clienteSchema.index(
-    { nombre: 1, direccion: 1 },
+    { businessId: 1, nombre: 1, direccion: 1 },
     {
         unique: true,
         partialFilterExpression: { direccion: { $type: "string" } },
     }
 );
 
-// ── Índice único para teléfono (solo cuando se provee) ────────────────────
+// ── Índice único para teléfono por empresa (solo cuando se provee) ─────────
 clienteSchema.index(
-    { telefono: 1 },
+    { businessId: 1, telefono: 1 },
     {
         unique: true,
         sparse: true, // Ignora documentos donde telefono es null/undefined
