@@ -64,6 +64,7 @@ Vos como administrador no debés compartir ni tu correo ni tu contraseña con tu
 3. Pásale ese código de 6 números (Ej: *48192A*) a tu repartidor.
 4. El repartidor se descarga la app, le da a "Registrarse", pone su propio correo/contraseña, y abajo dondre dice *'Código de Empresa'* pega el código que le diste.
 
+
 ¡Magia! El chofer ahora estará trabajando bajo el paraguas de tu empresa, viendo tus precios y tus clientes, **pero sin poder ver tus estadísticas gerenciales de dinero y sin poder borrar facturas**. 
 
 *Súbete al camión y buenas ventas!* 🚛💧
