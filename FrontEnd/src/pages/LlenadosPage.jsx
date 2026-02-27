@@ -42,11 +42,11 @@ const Stepper = ({ label, value, onChange }) => (
                 inputMode="numeric"
                 min="0"
                 value={value === 0 ? "" : value}
-                onChange={(e) => {
-                    const v = e.target.value;
-                    onChange(v === "" ? 0 : Math.max(0, Number(v) || 0));
+                onChange={(e) => onChange(e.target.value)}
+                onBlur={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    onChange(isNaN(v) ? 0 : Math.max(0, v));
                 }}
-                onBlur={(e) => { if (e.target.value === "") onChange(0); }}
                 placeholder="0"
                 className="w-12 text-center text-2xl font-extrabold text-slate-900 tabular-nums bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-lg px-0"
             />

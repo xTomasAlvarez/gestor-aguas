@@ -244,7 +244,19 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                                             <button type="button"
                                                 onClick={() => setProd(key, "cantidad", Math.max(0, cant - 1))}
                                                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-200 active:bg-slate-300 text-slate-700 text-xl font-bold touch-manipulation select-none">−</button>
-                                            <span className="w-8 text-center text-lg font-extrabold text-slate-900 tabular-nums">{cant}</span>
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                min="0"
+                                                value={prodState.cantidad === 0 ? "" : prodState.cantidad}
+                                                onChange={(e) => setProd(key, "cantidad", e.target.value)}
+                                                onBlur={(e) => {
+                                                    const v = parseInt(e.target.value, 10);
+                                                    setProd(key, "cantidad", isNaN(v) ? 0 : Math.max(0, v));
+                                                }}
+                                                placeholder="0"
+                                                className="w-12 text-center text-lg font-extrabold text-slate-900 tabular-nums bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-lg px-0"
+                                            />
                                             <button type="button"
                                                 onClick={() => setProd(key, "cantidad", cant + 1)}
                                                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-700 active:bg-blue-800 text-white text-xl font-bold touch-manipulation select-none">+</button>
