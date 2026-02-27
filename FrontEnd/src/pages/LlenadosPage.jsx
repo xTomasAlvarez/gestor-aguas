@@ -4,6 +4,7 @@ import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
+import SkeletonLoader from "../components/SkeletonLoader";
 import toast from "react-hot-toast";
 import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
@@ -124,20 +125,23 @@ const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdic
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const LlenadoFila = ({ llenado, onEditar, onEliminar }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-        <div className="flex flex-wrap gap-1.5">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-3 last:mb-0 flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2 items-center">
             {llenado.productos.map((p, i) => (
-                <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
-                    {p.cantidad} {p.producto}
+                <span key={i} className="text-xs font-bold bg-blue-50 text-blue-800 border border-blue-100 px-3 py-1.5 rounded-lg shadow-sm">
+                    {p.cantidad} <span className="font-medium text-slate-500">{p.producto}</span>
                 </span>
             ))}
-            {llenado.costo_total != null && (
-                <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">{formatPeso(llenado.costo_total)}</span>
-            )}
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-            <button onClick={() => onEditar(llenado)} className="text-xs text-blue-600 hover:underline">Editar</button>
-            <button onClick={() => onEliminar(llenado._id)} className="text-xs text-red-500 hover:underline">Eliminar</button>
+        {llenado.costo_total != null && (
+            <div className="flex justify-between items-center text-sm border-t border-slate-50 pt-2 mt-1">
+                <span className="text-slate-500 font-semibold text-xs tracking-wider uppercase">Costo Logistica</span>
+                <span className="text-slate-800 font-extrabold">{formatPeso(llenado.costo_total)}</span>
+            </div>
+        )}
+        <div className="flex gap-2 pt-3 border-t border-slate-100 mt-1">
+            <button onClick={() => onEditar(llenado)} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 rounded-lg transition-colors">Editar</button>
+            <button onClick={() => onEliminar(llenado._id)} className="text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 bg-red-50 rounded-lg transition-colors">Eliminar</button>
         </div>
     </div>
 );
@@ -166,7 +170,7 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
                 </div>
             </button>
             {expanded && (
-                <div className="px-5 pb-3 border-t border-slate-100">
+                <div className="px-4 pb-4 border-t border-slate-100 bg-slate-50/50 pt-3">
                     {items.map((l) => <LlenadoFila key={l._id} llenado={l} onEditar={onEditar} onEliminar={onEliminar} />)}
                 </div>
             )}
@@ -242,9 +246,9 @@ const LlenadosPage = () => {
                 <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
 
-            <div className="max-w-3xl mx-auto flex flex-col gap-2">
-                {cargando && <p className="text-center py-16 text-slate-400">Cargando...</p>}
-                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
+            <div className="max-w-3xl mx-auto flex flex-col gap-3">
+                {cargando && <SkeletonLoader lines={2} />}
+                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm font-semibold">{error}</div>}
                 {!cargando && !error && dias.length === 0 && <p className="text-center py-16 text-slate-400">Sin registros para este periodo.</p>}
                 {!cargando && !error && dias.map((dk) => (
                     <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}

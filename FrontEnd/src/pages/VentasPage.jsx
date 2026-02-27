@@ -5,6 +5,7 @@ import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
+import SkeletonLoader from "../components/SkeletonLoader";
 import toast from "react-hot-toast";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { METODOS_PAGO as METODOS } from "../utils/productos";
@@ -355,33 +356,56 @@ const MetodoBadge = ({ metodo }) => (
     </span>
 );
 
-// ── Accordion de días ─────────────────────────────────────────────────────
+// ── Fila de Venta (Estilo Card Móvil) ──────────────────────────────────────
 const VentaFila = ({ venta, onEditar, onAnular }) => {
     const abono = venta.monto_pagado ?? venta.total;
     const saldo = Math.max(0, venta.total - abono);
     return (
-        <div className="flex items-start justify-between py-2.5 border-b border-slate-100 last:border-0 gap-3">
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{venta.cliente?.nombre || "Cliente no disponible"}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                    {venta.items.map((item, i) => (
-                        <span key={i} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-3 last:mb-0 flex flex-col gap-3 relative">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                    <p className="text-base font-bold text-slate-800 truncate leading-tight">{venta.cliente?.nombre || "Cliente no disponible"}</p>
+                    {venta.cliente?.direccion && (
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{venta.cliente.direccion}</p>
+                    )}
+                    <span className="text-[10px] text-slate-400 mt-1 block font-medium uppercase tracking-wider">{formatFecha(venta.fecha)}</span>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                    <p className="text-lg font-extrabold text-slate-800 leading-none">{formatPeso(venta.total)}</p>
+                    <MetodoBadge metodo={venta.metodo_pago} />
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-1.5 flex-wrap">
+                {venta.items.length === 0 ? (
+                    <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">Cobranza</span>
+                ) : (
+                    venta.items.map((item, i) => (
+                        <span key={i} className="text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-lg">
                             {item.cantidad}x {item.producto}
                         </span>
-                    ))}
-                </div>
-                <p className="text-xs text-slate-400 mt-1">{formatFecha(venta.fecha)}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <p className="text-sm font-bold text-slate-800">{formatPeso(venta.total)}</p>
-                <MetodoBadge metodo={venta.metodo_pago} />
-                {saldo > 0 && (
-                    <span className="text-xs text-red-600 font-semibold">Debe: {formatPeso(saldo)}</span>
+                    ))
                 )}
-                <div className="flex gap-2 mt-0.5">
-                    <button onClick={() => onEditar(venta)} className="text-xs text-blue-600 hover:underline">Editar</button>
-                    <button onClick={() => onAnular(venta._id)} className="text-xs text-red-500 hover:underline">Anular</button>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-1">
+                <div className="flex gap-2">
+                    <button onClick={() => onEditar(venta)} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 rounded-lg transition-colors">Editar</button>
+                    <button onClick={() => onAnular(venta._id)} className="text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 bg-red-50 rounded-lg transition-colors">Anular</button>
                 </div>
+                {saldo > 0 ? (
+                    <div className="bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5 break-normal text-right">
+                        <span className="text-[10px] uppercase font-bold text-red-400 tracking-wider">Deuda:</span>
+                        <span className="text-sm font-extrabold text-red-600">{formatPeso(saldo)}</span>
+                    </div>
+                ) : (
+                    <div className="px-2 py-1 flex items-center gap-1 text-emerald-600">
+                        <svg viewBox="0 0 24 24" fill="none" strokeWidth={3} className="w-4 h-4 stroke-emerald-500">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-[10px] uppercase font-bold tracking-wider pt-0.5">Saldado</span>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -401,7 +425,7 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onAnular })
             </div>
         </button>
         {expanded && (
-            <div className="px-5 pb-3 border-t border-slate-100">
+            <div className="px-4 pb-4 border-t border-slate-100 bg-slate-50/50 pt-3">
                 {items.map((v) => <VentaFila key={v._id} venta={v} onEditar={onEditar} onAnular={onAnular} />)}
             </div>
         )}
@@ -484,9 +508,9 @@ const VentasPage = () => {
                 <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
 
-            <div className="max-w-4xl mx-auto flex flex-col gap-2">
-                {cargando && <p className="text-center py-16 text-slate-400">Cargando...</p>}
-                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
+            <div className="max-w-4xl mx-auto flex flex-col gap-3">
+                {cargando && <SkeletonLoader lines={3} />}
+                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm font-semibold">{error}</div>}
                 {!cargando && !error && dias.length === 0 && <p className="text-center py-16 text-slate-400">Sin ventas para este periodo.</p>}
                 {!cargando && !error && dias.map((dk) => (
                     <AccordionDia key={dk} diaKey={dk} items={porDia[dk]}

@@ -4,6 +4,7 @@ import useListaCrud from "../hooks/useListaCrud";
 import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
+import SkeletonLoader from "../components/SkeletonLoader";
 import toast from "react-hot-toast";
 import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
@@ -55,15 +56,19 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const GastoFila = ({ gasto, onEditar, onEliminar }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-        <div>
-            <p className="text-sm font-semibold text-slate-800">{gasto.concepto}</p>
-            <p className="text-xs text-slate-400">{formatFecha(gasto.fecha)}</p>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-3 last:mb-0 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-slate-800 truncate leading-tight">{gasto.concepto}</p>
+                <span className="text-[10px] text-slate-400 mt-1 block font-medium uppercase tracking-wider">{formatFecha(gasto.fecha)}</span>
+            </div>
+            <div className="flex flex-col items-end shrink-0">
+                <p className="text-lg font-extrabold text-slate-800 leading-none">{formatPeso(gasto.monto)}</p>
+            </div>
         </div>
-        <div className="flex items-center gap-3">
-            <p className="text-sm font-bold text-slate-800">{formatPeso(gasto.monto)}</p>
-            <button onClick={() => onEditar(gasto)} className="text-xs text-blue-600 hover:underline">Editar</button>
-            <button onClick={() => onEliminar(gasto._id)} className="text-xs text-red-500 hover:underline">Eliminar</button>
+        <div className="flex gap-2 pt-3 border-t border-slate-100 mt-1">
+            <button onClick={() => onEditar(gasto)} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 rounded-lg transition-colors">Editar</button>
+            <button onClick={() => onEliminar(gasto._id)} className="text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 bg-red-50 rounded-lg transition-colors">Eliminar</button>
         </div>
     </div>
 );
@@ -82,7 +87,7 @@ const AccordionDia = ({ diaKey, items, expanded, onToggle, onEditar, onEliminar 
             </div>
         </button>
         {expanded && (
-            <div className="px-5 pb-3 border-t border-slate-100">
+            <div className="px-4 pb-4 border-t border-slate-100 bg-slate-50/50 pt-3">
                 {items.map((g) => <GastoFila key={g._id} gasto={g} onEditar={onEditar} onEliminar={onEliminar} />)}
             </div>
         )}
@@ -147,9 +152,9 @@ const GastosPage = () => {
                 <FiltroTiempo valor={filtroTiempo} onChange={handleFiltro} />
             </div>
 
-            <div className="max-w-3xl mx-auto flex flex-col gap-2">
-                {cargando && <p className="text-center py-16 text-slate-400">Cargando...</p>}
-                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
+            <div className="max-w-3xl mx-auto flex flex-col gap-3">
+                {cargando && <SkeletonLoader lines={2} />}
+                {error && !cargando && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm font-semibold">{error}</div>}
                 {!cargando && !error && dias.length === 0 && <p className="text-center py-16 text-slate-400">Sin registros para este periodo.</p>}
                 {/* Eliminar item en cada fila → pasamos setConfirmar */}
             {!cargando && !error && dias.map((dk) => (
