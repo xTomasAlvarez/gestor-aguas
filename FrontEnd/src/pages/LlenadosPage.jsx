@@ -107,7 +107,8 @@ const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdic
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo total</label>
                 <input type="number" inputMode="numeric" min="0" value={form.costo_total}
                     onChange={(e) => setForm((p) => ({ ...p, costo_total: e.target.value }))}
-                    placeholder="Ej: 45000" className={`${inputCls} sm:w-48`} />
+                    placeholder="Ej: 45000" className={`${inputCls} sm:w-48`}
+                    required/>
             </div>
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>}
             <div className="flex gap-2">
