@@ -6,6 +6,11 @@ const generarCodigo = () => {
     return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 };
 
+const inventarioItemSchema = new mongoose.Schema({
+    cantidadTotal:   { type: Number, default: 0, min: 0 },
+    costoReposicion: { type: Number, default: 0, min: 0 }
+}, { _id: false });
+
 const productoSchema = new mongoose.Schema({
     key:           { type: String, required: true },
     label:         { type: String, required: true },
@@ -26,6 +31,12 @@ const empresaSchema = new mongoose.Schema({
             { key: "Bidon 12L", label: "Bidón 12L", precioDefault: 1800 },
             { key: "Soda",      label: "Soda",      precioDefault: 900  },
         ]
+    },
+    inventario: {
+        bidones20L: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
+        bidones12L: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
+        sodas:      { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
+        dispensers: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) }
     }
 }, { timestamps: true, versionKey: false });
 

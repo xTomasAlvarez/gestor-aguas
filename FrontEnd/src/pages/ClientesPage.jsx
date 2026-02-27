@@ -66,7 +66,7 @@ const TelInput = ({ value, onChange }) => {
 };
 
 // ── Formulario ────────────────────────────────────────────────────────────
-const FORM_VACIO = { nombre: "", direccion: "", telefono: "" };
+const FORM_VACIO = { nombre: "", direccion: "", telefono: "", dispensersAsignados: 0 };
 
 const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form,     setForm]     = useState(inicial);
@@ -93,6 +93,17 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
                 <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre *"  className={inputCls} />
                 <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Direccion" className={inputCls} />
             </div>
+            <div className="flex gap-4 items-center bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200">
+                <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-700">Equipos en Comodato</p>
+                    <p className="text-[10px] text-slate-500 leading-tight">Dispensers asignados (Afecta stock en calle)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setForm(p => ({ ...p, dispensersAsignados: Math.max(0, (p.dispensersAsignados || 0) - 1) }))} className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition">-</button>
+                    <span className="w-4 flex justify-center text-sm font-bold text-slate-800 tabular-nums">{form.dispensersAsignados || 0}</span>
+                    <button type="button" onClick={() => setForm(p => ({ ...p, dispensersAsignados: (p.dispensersAsignados || 0) + 1 }))} className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition">+</button>
+                </div>
+            </div>
             <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Telefono</p>
                 <TelInput value={form.telefono} onChange={handleTelChange} />
@@ -113,7 +124,7 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
 // ── Tarjeta de cliente activo ─────────────────────────────────────────────
 const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
-    const { nombre, direccion, telefono, deuda, saldo_pendiente = 0 } = cliente;
+    const { nombre, direccion, telefono, deuda, saldo_pendiente = 0, dispensersAsignados = 0 } = cliente;
     const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
     const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo_pendiente > 0;
     const telDisplay = telefono ? `+${telefono.slice(0,2)} ${telefono.slice(2,5)} ${telefono.slice(5,8)}-${telefono.slice(8)}` : null;
@@ -122,7 +133,10 @@ const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between gap-2">
                 <div>
-                    <h2 className="text-base font-bold text-slate-800 leading-tight">{nombre}</h2>
+                    <h2 className="text-base font-bold text-slate-800 leading-tight flex items-center gap-2">
+                        {nombre}
+                        {dispensersAsignados > 0 && <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[10px] uppercase font-black tracking-wider rounded">Eq: {dispensersAsignados}</span>}
+                    </h2>
                     {direccion  && <p className="text-sm text-slate-500 mt-0.5">{direccion}</p>}
                     {telDisplay && <a href={`tel:+${telefono}`} className="text-sm text-blue-600 hover:underline mt-0.5 block font-mono">{telDisplay}</a>}
                 </div>
@@ -345,7 +359,7 @@ const ClientesPage = () => {
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar cliente">
                 {editando && (
                     <FormCliente
-                        inicial={{ nombre: editando.nombre, direccion: editando.direccion || "", telefono: editando.telefono || "" }}
+                        inicial={{ nombre: editando.nombre, direccion: editando.direccion || "", telefono: editando.telefono || "", dispensersAsignados: editando.dispensersAsignados || 0 }}
                         onGuardar={handleEditar}
                         onCancelar={() => setEditando(null)}
                         esEdicion

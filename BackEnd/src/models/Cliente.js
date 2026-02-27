@@ -35,6 +35,11 @@ const clienteSchema = new Schema(
             type:    deudaSchema,
             default: () => ({}), // Inicializa con todos los campos en 0
         },
+        dispensersAsignados: {
+            type:    Number,
+            default: 0,
+            min:     0,
+        },
         activo: {
             type:    Boolean,
             default: true,

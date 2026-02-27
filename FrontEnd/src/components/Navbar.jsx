@@ -59,6 +59,12 @@ const IconBroadcast = ({ cls }) => (
     </svg>
 );
 
+const IconInventario = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+);
+
 const IconShield = ({ cls }) => (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -91,6 +97,7 @@ const Navbar = () => {
         { to: "/gastos",        label: "Gastos",      Icon: IconGastos    },
         { to: "/estadisticas",  label: "Stats",       Icon: IconStats     },
         ...(isAdmin ? [
+            { to: "/inventario",   label: "Inventario",Icon: IconInventario },
             { to: "/broadcast",    label: "Difusion",  Icon: IconBroadcast },
             { to: "/configuracion", label: "Config",   Icon: IconConfig    },
         ] : []),

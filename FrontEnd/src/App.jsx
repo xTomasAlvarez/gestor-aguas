@@ -17,6 +17,7 @@ import BroadcastPage     from "./pages/BroadcastPage";
 import SuspendedPage     from "./pages/SuspendedPage";
 import SuperAdminPage    from "./pages/SuperAdminPage";
 import OnboardingPage    from "./pages/OnboardingPage";
+import InventarioPage    from "./pages/InventarioPage";
 import { useConfig }     from "./context/ConfigContext";
 import { useAuth }       from "./context/AuthContext";
 
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/llenados"     element={<Privada><LlenadosPage /></Privada>} />
                 <Route path="/gastos"       element={<Privada><GastosPage /></Privada>} />
                 <Route path="/estadisticas" element={<Privada><DashboardPage /></Privada>} />
+                <Route path="/inventario"    element={<Privada><InventarioPage /></Privada>} />
                 <Route path="/configuracion" element={<Privada><ConfigPage /></Privada>} />
                 <Route path="/broadcast"     element={<Privada><BroadcastPage /></Privada>} />
                 <Route path="/superadmin"    element={<Privada><SuperAdminPage /></Privada>} />
