@@ -4,7 +4,6 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 
 // ── Importaciones internas ─────────────────────────────────────────────────
@@ -22,6 +21,7 @@ import inventarioRoutes from "./src/routes/inventarioRoutes.js";
 import { proteger }   from "./src/middleware/authMiddleware.js";
 import { checkStatus } from "./src/middleware/checkStatus.js";
 import { soloSuperAdmin } from "./src/middleware/superAdminMiddleware.js";
+import { sanitizeNoSQL } from "./src/middleware/sanitizeNoSQL.js";
 
 // ── Variables de entorno ───────────────────────────────────────────────────
 const PORT   = process.env.PORT   || 3005;
@@ -54,14 +54,16 @@ const corsOptions = {
 
 // Debe ser el PRIMER middleware en inyectarse para asegurar resolución de cabeceras
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Asegura respuesta a preflight globale (vital)
+
 
 // ── Middlewares globales de Ciberseguridad ──────────────────────────────────
 app.use(helmet()); // Añade cabeceras HTTP seguras (anti-XSS, anti-Clickjacking)
 
-// Sanitización agresiva contra Inyecciones NoSQL (elimina $ y .)
-app.use(mongoSanitize());
+// Parseo de JSON debe ir ANTES de sanitizar el body
 app.use(express.json({ limit: "1mb" })); // Límite de payload
+
+// Sanitización manual contra Inyecciones NoSQL (Express 5 compatible)
+app.use(sanitizeNoSQL);
 
 // Limitador de Tráfico Global (DDoS Básico)
 const limiterGlobal = rateLimit({
