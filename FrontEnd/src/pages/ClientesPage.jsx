@@ -95,13 +95,13 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
             </div>
             <div className="flex gap-4 items-center bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200">
                 <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-700">Equipos en Comodato</p>
-                    <p className="text-[10px] text-slate-500 leading-tight">Dispensers asignados (Afecta stock en calle)</p>
+                    <p className="text-sm font-bold text-slate-700">Equipos en Cliente</p>
+                    <p className="text-[10px] text-slate-500 leading-tight">Dispensers prestados para su uso (Afecta stock en calle)</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setForm(p => ({ ...p, dispensersAsignados: Math.max(0, (p.dispensersAsignados || 0) - 1) }))} className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition">-</button>
-                    <span className="w-4 flex justify-center text-sm font-bold text-slate-800 tabular-nums">{form.dispensersAsignados || 0}</span>
-                    <button type="button" onClick={() => setForm(p => ({ ...p, dispensersAsignados: (p.dispensersAsignados || 0) + 1 }))} className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition">+</button>
+                    <button type="button" title="Retirar Equipo" aria-label="Retirar Equipo" onClick={() => setForm(p => ({ ...p, dispensersAsignados: Math.max(0, (p.dispensersAsignados || 0) - 1) }))} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold text-lg hover:bg-slate-300 transition touch-manipulation">-</button>
+                    <span className="w-6 flex justify-center text-base font-bold text-slate-800 tabular-nums">{form.dispensersAsignados || 0}</span>
+                    <button type="button" title="Asignar Equipo" aria-label="Asignar Equipo" onClick={() => setForm(p => ({ ...p, dispensersAsignados: (p.dispensersAsignados || 0) + 1 }))} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold text-lg hover:bg-slate-300 transition touch-manipulation">+</button>
                 </div>
             </div>
             <div>

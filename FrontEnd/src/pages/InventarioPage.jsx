@@ -166,7 +166,7 @@ const InventarioPage = () => {
                                         <div className="pl-4">
                                             <div className="flex items-center gap-1.5 mb-1">
                                                 <Truck className="w-4 h-4 text-orange-500" />
-                                                <p className="text-xs font-bold text-slate-600 uppercase">En Calle (Comodato)</p>
+                                                <p className="text-xs font-bold text-slate-600 uppercase">En Clientes</p>
                                             </div>
                                             <p className="text-xl font-black text-orange-600">{data.enCalle}</p>
                                         </div>
