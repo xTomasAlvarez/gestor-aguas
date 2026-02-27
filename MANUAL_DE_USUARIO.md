@@ -21,14 +21,14 @@ La app está diseñada para usarse desde el celular con una mano rápida.
 1. Toca en **"Ventas"** (el logo de la caja registradora abajo a la izquierda).
 2. Toca el botón verde enorme que dice **"+ Nueva Venta"**.
 3. Selecciona a qué **Cliente** le estás entregando hoy.
-4. Toca el botón `+` para sumar los bidones que bajaste del camión.
+4. Toca el botón `+` para sumar los productos o bidones que bajaste del camión.
 5. Presiona **Guardar Venta**.
 
 ### Entendiendo el Dinero: Efectivo vs. Fiado
 La app se encarga de las cuentas por ti, pero debes ser preciso cuando el cliente te paga:
 - **Pago Completo:** Si el cliente te paga todo en el momento, asegúrate de que el monto en "Abonó" sea **igual** al "Total". La venta aparecerá como un éxito en **Verde**.
 - **Venta Fiada (No paga hoy o paga menos):** Si el cliente no te paga hoy (cuenta corriente), simplemente deja el casillero de "Abonó" en **$0** (cero) o pon solo lo que te adelantó. 
-  - *Automáticamente*, el sistema registra que el cliente te debe el saldo restante, y esa venta quedará marcada para siempre en **Rojo** alertando deuda viva, sumándose a la "Deuda Total en Calle".
+  - *Automáticamente*, el sistema registra que el cliente te debe el saldo restante, y esa venta quedará marcada para siempre en **Rojo** alertando la deuda viva, sumándose a la "Deuda Total en Calle".
 
 ---
 
@@ -37,21 +37,21 @@ Con un solo vistazo a la sección **"Stats"** del menú, verás la salud de tu n
 
 - **Caja Real de Hoy (Verde):** Es la plata física/digital que *realmente* te entró a la billetera.
 - **Deuda Viva Total (Roja):** Es el acumulado histórico de todo el dinero que tus clientes te deben porque les fiaste (saldo pendiente mundial).
-- **Alarmas de Recupero:** A la derecha (o abajo en el celular), verás una lista de clientes "en riesgo". Son aquellos clientes que tienen Dispénsters tuyos en su casa pero que **llevan más de 20 días sin comprarte nada**. ¡Es hora de llamarlos!
+- **Alarmas de Recupero:** A la derecha (o abajo en el celular), verás una lista de clientes "en riesgo". Son aquellos clientes que tienen Dispénsters tuyos en su casa pero que **llevan más de 20 días sin comprarte nada**. ¡Es hora de llamarlos para recuperarlos!
 
 ---
 
-## 🚰 4. Controlando el Capital: Tus Dispensers
+## 🚰 4. Controlando el Capital: Tus Equipos en Cliente
 Tus dispensers en la calle valen dinero. Si no sabes dónde están, estás perdiendo plata.
 
 ### ¿Cómo registro un equipo que dejé en un cliente?
 1. Ve a la pestaña **Clientes**.
 2. Entra al perfil del cliente al que le dejas la máquina.
-3. Busca la sección *"Dispensers en Cliente"* y toca **Asignar Equipo** (el botón verde `+`).
+3. Busca la sección *"Equipos en Cliente"* y toca **Asignar Equipo** (el botón verde `+`).
 4. Si un día se lo retiras temporal o permanentemente, entras y tocas **Retirar Equipo** (botón naranja `-`).
 
 ### ¿Cómo veo el Capital Total de mi negocio?
-Si vas a **Stats** o a **Inventario**, la app multiplicará todos los dispensers que tienes en el depósito más todos los que dejaste en la calle por el costo de reposición. Esto te dará tu **Valorización Total**, dándote tu "Valor Neto" físico como empresa en tiempo real sin cálculos suplex.
+Si vas a **Stats** o a **Inventario**, la app multiplicará todos los dispensers que tienes en el depósito más todos los que dejaste en la calle por el costo de reposición que ingresaste tú mismo. Esto te dará la **Valorización Total**, informándote tu "Valor Neto" físico como empresa en tiempo real sin cálculos pesados.
 
 ---
 
@@ -61,10 +61,10 @@ Vos como administrador no debés compartir ni tu correo ni tu contraseña con tu
 ### Generar la "Llave" para un nuevo chofer:
 1. Ve al menú hamburguesa (arriba a la derecha ☰) y selecciona **"Difusión/RRHH"**.
 2. Dale al botón para crear un **Código de Invitación** (este código dura unas horas por seguridad).
-3. Pásale ese código de 6 números (Ej: *48192A*) a tu repartidor.
-4. El repartidor se descarga la app, le da a "Registrarse", pone su propio correo/contraseña, y abajo dondre dice *'Código de Empresa'* pega el código que le diste.
-5. Una vez que el repartidor a creado su cuenta, el administrador debe ir a la sección **"Difusión/RRHH"** y darle al botón para **"Activar Repartidor"**. Entonces ahi ya la cuenta del repartidor quedara operativa y podra trabajar.
+3. Pásale ese código de 6 letras/números (Ej: *48192A*) a tu repartidor de confianza.
+4. El repartidor se descarga la app, le da a "Registrarse", pone su propio correo/contraseña, y abajo donde dice *'Código de Empresa'* pega el código que le brindaste.
+5. Una vez que el repartidor haya creado su cuenta, el administrador debe ir a la sección **"Difusión/RRHH"** y darle al botón de **"Activar Repartidor"**. En ese momento, la cuenta del repartidor quedará operativa y podrá arrancar el recorrido.
 
-¡Magia! El chofer ahora estará trabajando bajo el paraguas de tu empresa, viendo tus precios y tus clientes, **pero sin poder ver tus estadísticas gerenciales de dinero y sin poder borrar facturas**. 
+¡Felicidades! El chofer ahora estará trabajando bajo el paraguas de tu empresa, viendo tus precios y tus clientes, **pero sin poder ver tus estadísticas gerenciales de dinero y sin poder borrar facturas**. 
 
-*Súbete al camión y buenas ventas!* 🚛💧
+*¡Súbete al camión y buenas ventas!* 🚛💧
