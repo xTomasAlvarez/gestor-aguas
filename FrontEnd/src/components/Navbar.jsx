@@ -59,6 +59,12 @@ const IconBroadcast = ({ cls }) => (
     </svg>
 );
 
+const IconMenu = ({ cls }) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+);
+
 const IconInventario = ({ cls }) => (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className={cls}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -106,6 +112,11 @@ const Navbar = () => {
         ] : []),
     ];
 
+    // Splitting logic for Mobile Navbar
+    const bottomNavKeys = ["/clientes", "/ventas", "/planilla", "/llenados", "/gastos", "/inventario"];
+    const bottomNavLinks = navLinks.filter(l => bottomNavKeys.includes(l.to)).slice(0, 6);
+    const drawerNavLinks = navLinks.filter(l => !bottomNavKeys.includes(l.to));
+
     const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
 
     return (
@@ -142,48 +153,69 @@ const Navbar = () => {
                         </button>
                     </div>
 
-                    {/* Mobile: user avatar button */}
+                    {/* Mobile: Hamburger Menu Button */}
                     <button
-                        className="sm:hidden flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-700 transition-colors"
+                        className="sm:hidden flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
                         onClick={() => setMenuAbierto((p) => !p)}
                     >
-                        <span className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold text-white">
-                            {usuario?.nombre?.[0]?.toUpperCase() || "?"}
-                        </span>
+                        <IconMenu cls="w-6 h-6 stroke-current" />
                     </button>
                 </div>
 
-                {/* Mobile: user dropdown */}
+                {/* Mobile: Drawer / Dropdown */}
                 {menuAbierto && (
-                    <div className="sm:hidden bg-slate-800 border-t border-slate-700 px-5 py-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-white">{usuario?.nombre}</p>
-                            <p className="text-xs text-slate-400">{usuario?.email}</p>
+                    <div className="sm:hidden bg-slate-800 border-t border-slate-700 shadow-2xl relative w-full z-50 overflow-hidden">
+                        {/* Información del Usuario */}
+                        <div className="px-5 py-4 bg-slate-900/40 border-b border-slate-700 font-medium">
+                            <p className="text-sm font-bold text-white tracking-wide">{usuario?.nombre}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{usuario?.email}</p>
                         </div>
-                        <button onClick={handleLogout}
-                            className="text-xs font-semibold text-slate-300 border border-slate-600 rounded-xl px-4 py-2 hover:bg-slate-700 hover:text-white transition-colors">
-                            Cerrar sesion
-                        </button>
+                        
+                        {/* Links Secundarios */}
+                        <div className="flex flex-col py-2 px-3 gap-1">
+                            {drawerNavLinks.map((navItem) => {
+                                const active = pathname === navItem.to;
+                                const DrawerIcon = navItem.Icon;
+                                return (
+                                    <Link key={navItem.to} to={navItem.to} onClick={() => setMenuAbierto(false)}
+                                        className={`flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                                            active ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-slate-700"
+                                        }`}
+                                    >
+                                        <DrawerIcon cls="w-5 h-5 stroke-current" />
+                                        {navItem.label}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {/* Logout Section */}
+                        <div className="px-4 py-4 mt-2 border-t border-slate-700 flex justify-end">
+                            <button onClick={handleLogout}
+                                className="text-sm font-bold text-red-400 bg-red-400/10 border border-red-500/20 rounded-xl px-5 py-2.5 hover:bg-red-500 hover:text-white transition-colors w-full sm:w-auto text-center">
+                                Cerrar sesión
+                            </button>
+                        </div>
                     </div>
                 )}
             </nav>
 
             {/* ── BOTTOM TAB BAR (solo mobile) ───────────────────────── */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-700 flex">
-                {navLinks.map((navItem) => {
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex justify-around px-1 pb-safe">
+                {bottomNavLinks.map((navItem) => {
                     const active  = pathname === navItem.to;
                     const NavIcon = navItem.Icon;
                     return (
                         <Link key={navItem.to} to={navItem.to}
-                            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors ${
-                                active ? "text-blue-400" : "text-slate-500 active:text-slate-300"
+                            className={`flex flex-col items-center justify-center py-2 flex-1 relative gap-[3px] transition-colors ${
+                                active ? "text-blue-400" : "text-slate-500 hover:text-slate-400"
                             }`}
                         >
-                            <NavIcon cls="w-5 h-5 stroke-current" />
-                            <span className={`text-[10px] font-semibold leading-none ${active ? "text-blue-400" : "text-slate-500"}`}>
+                            <NavIcon cls={`w-6 h-6 stroke-current ${active ? "stroke-2" : "stroke-[1.6]"}`} />
+                            <span className={`text-[9.5px] leading-tight font-semibold tracking-tight truncate w-full text-center px-1 ${active ? "text-blue-400" : "text-slate-500"}`}>
                                 {navItem.label}
                             </span>
-                            {active && <span className="absolute bottom-0 w-8 h-0.5 bg-blue-500 rounded-t-full" />}
+                            {active && <span className="absolute bottom-0 w-8 h-[3px] bg-blue-500 rounded-t-full" />}
                         </Link>
                     );
                 })}
