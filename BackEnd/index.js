@@ -30,6 +30,32 @@ const DB_URI = process.env.DB_URI || "mongodb://localhost:27017/reparto_db";
 // ── Inicialización de Express ──────────────────────────────────────────────
 const app = express();
 
+// ── 1. Configuración Dinámica y Crítica de CORS ───────────────────────────
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            process.env.FRONTEND_URL, // La URL principal (producción o el localhost de tu .env)
+            "http://localhost:5173",  // Vite por defecto
+            "http://127.0.0.1:5173"   // Alternativa local
+        ];
+
+        // Permitir requests sin origin (como Postman o el mismo servidor) o si el origin está en la lista
+        if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
+            callback(null, true);
+        } else {
+            console.warn("CORS BLOQUEADO PARA ORIGEN:", origin); // Log estricto para debugging
+            callback(new Error("Acceso bloqueado por políticas de CORS"));
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+// Debe ser el PRIMER middleware en inyectarse para asegurar resolución de cabeceras
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Asegura respuesta a preflight globale (vital)
+
 // ── Middlewares globales de Ciberseguridad ──────────────────────────────────
 app.use(helmet()); // Añade cabeceras HTTP seguras (anti-XSS, anti-Clickjacking)
 
@@ -47,27 +73,8 @@ const limiterGlobal = rateLimit({
 });
 app.use(limiterGlobal);
 
+// ── 3. Otros Middlewares Globales ──────────────────────────────────────────
 app.use(morgan("dev"));
-
-// Configuración estricta de CORS
-const allowedOrigins = [
-    process.env.FRONTEND_URL, // La URL principal (producción o el localhost de tu .env)
-    "http://localhost:5173",  // Vite por defecto
-    "http://127.0.0.1:5173"   // Alternativa local
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        // Permitir peticiones sin origen (como Postman) o si el origen está en la lista blanca
-        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
-            callback(null, true);
-        } else {
-            callback(new Error("Acceso bloqueado por políticas de CORS"));
-        }
-    },
-    credentials: true,
-}));
-
 // ── Conexión a la Base de Datos ────────────────────────────────────────────
 dbConect(DB_URI);
 
