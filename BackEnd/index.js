@@ -50,11 +50,16 @@ app.use(limiterGlobal);
 app.use(morgan("dev"));
 
 // Configuración estricta de CORS
-const dominiosPermitidos = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",") : [];
+const allowedOrigins = [
+    process.env.FRONTEND_URL, // La URL principal (producción o el localhost de tu .env)
+    "http://localhost:5173",  // Vite por defecto
+    "http://127.0.0.1:5173"   // Alternativa local
+];
+
 app.use(cors({
     origin: function (origin, callback) {
         // Permitir peticiones sin origen (como Postman) o si el origen está en la lista blanca
-        if (!origin || dominiosPermitidos.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
+        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
             callback(null, true);
         } else {
             callback(new Error("Acceso bloqueado por políticas de CORS"));
