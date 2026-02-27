@@ -1,3 +1,3 @@
 import api from "./api";
 
-export const getDashboardStats = () => api.get("/stats/dashboard");
+export const getDashboardStats = (tiempo = "mes") => api.get("/stats/dashboard", { params: { tiempo } });
