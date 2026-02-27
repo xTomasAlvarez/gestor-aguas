@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { setLogoutFn } from "../services/api";
+import api, { setLogoutFn } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -11,6 +11,7 @@ const leerUsuario = () => {
 
 export const AuthProvider = ({ children }) => {
     const [usuario, setUsuario] = useState(leerUsuario);
+    const [cargandoAuth, setCargandoAuth] = useState(true); // Bloquea la app hasta validar el token
 
     const login = useCallback(({ token, usuario }) => {
         localStorage.setItem("token",   token);
@@ -30,8 +31,35 @@ export const AuthProvider = ({ children }) => {
         return () => setLogoutFn(null);
     }, [logout]);
 
+    // Función que verifica si el JWT local sigue siendo válido en el Backend
+    useEffect(() => {
+        let mounted = true;
+        const verificarSesionBackend = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                if (mounted) setCargandoAuth(false);
+                return;
+            }
+            try {
+                const { data } = await api.get("/auth/me");
+                if (mounted) {
+                    setUsuario(data.usuario);
+                    localStorage.setItem("usuario", JSON.stringify(data.usuario));
+                }
+            } catch (err) {
+                console.warn("Token expirado o inválido. Cerrando sesión de seguridad.", err);
+                logout(); // Si responde 401 el interceptor limpia, pero por las dudas
+            } finally {
+                if (mounted) setCargandoAuth(false);
+            }
+        };
+
+        verificarSesionBackend();
+        return () => { mounted = false; };
+    }, [logout]);
+
     return (
-        <AuthContext.Provider value={{ usuario, login, logout }}>
+        <AuthContext.Provider value={{ usuario, cargandoAuth, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

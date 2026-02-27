@@ -108,3 +108,19 @@ export const login = async (req, res) => {
         res.status(500).json({ message: "Error al iniciar sesión.", detalle: err.message });
     }
 };
+
+// ── GET /api/auth/me ───────────────────────────────────────────────────────
+// Endpoint de validación de Sesión. El AuthContext de React consumirá esto 
+// tras cada F5 o entrada en crudo para asegurarse que el JWT es válido y no hay false-positives
+export const obtenerSesionActual = async (req, res) => {
+    try {
+        // req.usuario ya viene inyectado fresco por el middleware proteger.js
+        const usuarioValido = await Usuario.findById(req.usuario._id);
+        if (!usuarioValido || !usuarioValido.activo) {
+            return res.status(401).json({ message: "Usuario inválido o desactivado." });
+        }
+        res.json({ usuario: usuarioSeguro(usuarioValido) });
+    } catch (error) {
+        res.status(500).json({ message: "Error verificando sesión", error: error.message });
+    }
+};

@@ -18,15 +18,22 @@ import SuspendedPage     from "./pages/SuspendedPage";
 import SuperAdminPage    from "./pages/SuperAdminPage";
 import OnboardingPage    from "./pages/OnboardingPage";
 import InventarioPage    from "./pages/InventarioPage";
-import { useConfig }     from "./context/ConfigContext";
 import { useAuth }       from "./context/AuthContext";
+import { useConfig }     from "./context/ConfigContext";
+
+// Protege rutas públicas (login/register) repeliendo usuarios ya logueados hacia la app
+const PublicRoute = ({ children }) => {
+    const { usuario, cargandoAuth } = useAuth();
+    if (cargandoAuth) return null; // Esperar a saber el estado real
+    return usuario ? <Navigate to="/" replace /> : children;
+};
 
 // Evalúa si la empresa necesita el Onboarding o puede seguir normal
 const OnboardingGuard = ({ children }) => {
     const { config } = useConfig();
-    const { usuario } = useAuth();
+    const { usuario, cargandoAuth } = useAuth();
 
-    if (config?.cargando) return null;
+    if (cargandoAuth || config?.cargando) return null; // Bloquea evaluación hasta estar seguros
 
     // Si es superadmin o empleado, u onboarding ya está completo -> Pasa
     if (usuario?.rol === "admin" && config && !config.onboardingCompletado) {
@@ -64,9 +71,9 @@ const App = () => (
         <BrowserRouter>
             <OfflineIndicator />
             <Routes>
-                {/* Rutas públicas */}
-                <Route path="/login"       element={<LoginPage />} />
-                <Route path="/register"    element={<RegisterPage />} />
+                {/* Rutas públicas protegidas contra re-ingreso */}
+                <Route path="/login"       element={<PublicRoute><LoginPage /></PublicRoute>} />
+                <Route path="/register"    element={<PublicRoute><RegisterPage /></PublicRoute>} />
                 <Route path="/suspended"   element={<SuspendedPage />} />
 
                 {/* Rutas Privadas / Onboarding */}
