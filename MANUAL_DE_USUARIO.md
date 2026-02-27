@@ -63,7 +63,7 @@ Vos como administrador no debés compartir ni tu correo ni tu contraseña con tu
 2. Dale al botón para crear un **Código de Invitación** (este código dura unas horas por seguridad).
 3. Pásale ese código de 6 números (Ej: *48192A*) a tu repartidor.
 4. El repartidor se descarga la app, le da a "Registrarse", pone su propio correo/contraseña, y abajo dondre dice *'Código de Empresa'* pega el código que le diste.
-
+5. Una vez que el repartidor a creado su cuenta, el administrador debe ir a la sección **"Difusión/RRHH"** y darle al botón para **"Activar Repartidor"**. Entonces ahi ya la cuenta del repartidor quedara operativa y podra trabajar.
 
 ¡Magia! El chofer ahora estará trabajando bajo el paraguas de tu empresa, viendo tus precios y tus clientes, **pero sin poder ver tus estadísticas gerenciales de dinero y sin poder borrar facturas**. 
 
