@@ -2,13 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { obtenerVentas }   from "../services/ventasService";
 import { obtenerGastos }   from "../services/gastosService";
 import { obtenerLlenados } from "../services/llenadoService";
-import { formatPeso, dayKey } from "../utils/format";
+import { formatPeso, dayKey, hoyLocal } from "../utils/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const hoy = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+const hoyStr = hoyLocal();
 
 const cantProd = (items, prod) => {
     const found = items?.find((i) => i.producto === prod);
@@ -36,7 +33,9 @@ const TablaVentas = ({ ventas }) => {
     );
 
     const totalDia  = ventas.reduce((acc, v) => acc + v.total, 0);
-    const totalAbono = ventas.reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const totalAbonoEfvo = ventas
+        .filter(v => v.metodo_pago === "efectivo")
+        .reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
     const totalSaldo = ventas.reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? v.total)), 0);
 
     return (
@@ -117,7 +116,10 @@ const TablaVentas = ({ ventas }) => {
                             {ventas.reduce((acc, v) => acc + cantProd(v.items, "Soda"), 0) || "—"}
                         </td>
                         <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
-                        <td className="text-right px-3 py-3 text-emerald-700">{formatPeso(totalAbono)}</td>
+                        <td className="text-right px-3 py-3 text-emerald-700">
+                            {formatPeso(totalAbonoEfvo)}
+                            <span className="block text-[10px] text-slate-500 font-normal">solo efvo</span>
+                        </td>
                         <td className={`text-right px-3 py-3 ${totalSaldo > 0 ? "text-red-600" : "text-slate-300"}`}>
                             {totalSaldo > 0 ? formatPeso(totalSaldo) : "—"}
                         </td>
@@ -286,7 +288,7 @@ const ArqueoCaja = ({ ventas, gastos }) => {
 
 // ── Página principal ───────────────────────────────────────────────────────
 const PlanillaPage = () => {
-    const [fecha,    setFecha]    = useState(hoy());
+    const [fecha,    setFecha]    = useState(hoyStr);
     const [ventas,   setVentas]   = useState([]);
     const [gastos,   setGastos]   = useState([]);
     const [llenados, setLlenados] = useState([]);

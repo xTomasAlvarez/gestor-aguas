@@ -5,12 +5,11 @@ import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
-import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
+import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 
 // ── Formulario crear/editar ────────────────────────────────────────────────
-const hoy = () => new Date().toISOString().slice(0, 10);
-const FORM_VACIO = { concepto: "", monto: "", fecha: hoy() };
+const FORM_VACIO = { concepto: "", monto: "", fecha: hoyLocal() };
 
 const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form, setForm]         = useState(inicial);
@@ -23,10 +22,10 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
         e.preventDefault();
         if (!form.concepto.trim()) return setError("El concepto es obligatorio.");
         if (!form.monto || Number(form.monto) <= 0) return setError("El monto debe ser mayor a 0.");
-        if (form.fecha > hoy()) return setError("No se pueden registrar fechas futuras.");
+        if (form.fecha > hoyLocal()) return setError("No se pueden registrar fechas futuras.");
         setEnviando(true);
         try {
-            await onGuardar({ concepto: form.concepto.trim(), monto: Number(form.monto), fecha: form.fecha });
+            await onGuardar({ concepto: form.concepto.trim(), monto: Number(form.monto), fecha: prepararFechaBackend(form.fecha) });
             if (!esEdicion) setForm(FORM_VACIO);
         } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
@@ -36,7 +35,7 @@ const FormGasto = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = fa
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
-                <input name="fecha" type="date" value={form.fecha} max={hoy()}
+                <input name="fecha" type="date" value={form.fecha} max={hoyLocal()}
                     onChange={handleChange} className={`${inputCls} sm:w-48`} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
@@ -167,7 +166,7 @@ const GastosPage = () => {
         <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar gasto">
             {editando && (
                 <FormGasto
-                    inicial={{ concepto: editando.concepto, monto: editando.monto }}
+                    inicial={{ concepto: editando.concepto, monto: editando.monto, fecha: isoToInputDate(editando.fecha) }}
                     onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
             )}
         </Modal>

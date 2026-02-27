@@ -5,7 +5,7 @@ import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
-import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
+import { formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 import { useConfig } from "../context/ConfigContext";
 
@@ -14,7 +14,7 @@ const llenadoToForm = (l, catProductos) => {
     const cantidades = {};
     catProductos.forEach(p => { cantidades[p.key] = 0; });
     l.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
-    return { cantidades, costo_total: l.costo_total ?? "", fecha: l.fecha ? l.fecha.split("T")[0] : hoy() };
+    return { cantidades, costo_total: l.costo_total ?? "", fecha: isoToInputDate(l.fecha) };
 };
 
 const formToPayload = ({ cantidades, costo_total, fecha }, catProductos) => ({
@@ -22,11 +22,10 @@ const formToPayload = ({ cantidades, costo_total, fecha }, catProductos) => ({
         .filter(({ key }) => Number(cantidades[key]) > 0)
         .map(({ key }) => ({ producto: key, cantidad: Number(cantidades[key]) })),
     ...(costo_total !== "" && { costo_total: Number(costo_total) }),
-    ...(fecha && { fecha }),
+    ...(fecha && { fecha: prepararFechaBackend(fecha) }),
 });
 
 // ── Formulario ────────────────────────────────────────────────────────────
-const hoy = () => new Date().toISOString().slice(0, 10);
 
 // Stepper táctil: fila con label a la izq y controles a la der
 const Stepper = ({ label, value, onChange }) => (
@@ -64,7 +63,7 @@ const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdic
     const defaultCantidades = {};
     envaseConfig.forEach(p => { defaultCantidades[p.key] = 0; });
 
-    const [form, setForm]         = useState(inicial || { cantidades: defaultCantidades, costo_total: "", fecha: hoy() });
+    const [form, setForm]         = useState(inicial || { cantidades: defaultCantidades, costo_total: "", fecha: hoyLocal() });
     const [enviando, setEnviando] = useState(false);
     const [error, setError]       = useState(null);
 
@@ -78,7 +77,7 @@ const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdic
         setEnviando(true);
         try { 
             await onGuardar(payload); 
-            if (!esEdicion) setForm({ cantidades: defaultCantidades, costo_total: "", fecha: hoy() }); 
+            if (!esEdicion) setForm({ cantidades: defaultCantidades, costo_total: "", fecha: hoyLocal() }); 
         }
         catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
@@ -88,7 +87,7 @@ const FormLlenado = ({ envaseConfig = [], inicial, onGuardar, onCancelar, esEdic
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
-                <input type="date" value={form.fecha} max={hoy()}
+                <input type="date" value={form.fecha} max={hoyLocal()}
                     onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))}
                     className={`${inputCls} sm:w-48`} />
             </div>

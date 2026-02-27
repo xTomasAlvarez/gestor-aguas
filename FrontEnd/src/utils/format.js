@@ -7,6 +7,29 @@ export const MESES = [
 export const PRODUCTOS_ENUM = ["Bidon 20L", "Bidon 12L", "Soda"];
 
 // ── Formateo ──────────────────────────────────────────────────────────────
+export const hoyLocal = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+};
+
+export const isoToInputDate = (iso) => {
+    if (!iso) return hoyLocal();
+    const d = new Date(iso);
+    if (isNaN(d)) return hoyLocal();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+};
+
+export const prepararFechaBackend = (fechaStr) => {
+    if (!fechaStr) return undefined;
+    if (fechaStr.includes("T")) return fechaStr;
+    const [y, m, d] = fechaStr.split("-").map(Number);
+    const date = new Date();
+    date.setFullYear(y, m - 1, d);
+    return date.toISOString();
+};
+
 export const formatFecha = (iso) =>
     new Date(iso).toLocaleString("es-AR", {
         day: "2-digit", month: "2-digit", year: "numeric",

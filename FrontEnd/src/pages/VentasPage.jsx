@@ -6,13 +6,10 @@ import FiltroTiempo from "../components/FiltroTiempo";
 import Modal from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
-import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG } from "../utils/format";
+import { formatFecha, formatPeso, groupByDay, formatFechaDia, filtrarPorTiempo, FILTRO_CONFIG, hoyLocal, isoToInputDate, prepararFechaBackend } from "../utils/format";
 import { METODOS_PAGO as METODOS } from "../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../styles/cls";
 import { useConfig } from "../context/ConfigContext";
-
-// ── Constantes ────────────────────────────────────────────────────────────
-const hoy = () => new Date().toISOString().slice(0, 10);
 
 // Helpers
 const calcItems = (prods) =>
@@ -43,7 +40,7 @@ const ventaToForm = (v, catProductos) => {
         productos:    prods,
         monto_pagado: v.monto_pagado ?? "",
         esCobranza:   v.items.length === 0,
-        fecha:        formatFecha(v.fecha).split('/').reverse().join('-') // asume YYYY-MM-DD para input date si formatFecha devuelve string, en este caso vamos a usar un format directo para date
+        fecha:        isoToInputDate(v.fecha)
     };
 };
 
@@ -138,7 +135,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
     productosBase.forEach(p => { defaultProductos[p.key] = { cantidad: 0, precio_unitario: p.precioDefault }; });
     
     const [form, setForm] = useState(inicial || { 
-        cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoy() 
+        cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoyLocal() 
     });
 
     const [enviando, setEnviando] = useState(false);
@@ -148,10 +145,13 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
     const items      = esCobranza ? [] : calcItems(form.productos);
     const total      = esCobranza ? 0  : calcTotal(form.productos, form.descuento);
 
-    // monto_pagado efectivo: si está vacío y no es cobranza, default = total
-    const montoPagadoEfectivo = form.monto_pagado === ""
-        ? (esCobranza ? 0 : total)
-        : Number(form.monto_pagado);
+    // monto_pagado efectivo: si está vacío y no es cobranza, default = total (salvo fiado)
+    let montoPagadoEfectivo;
+    if (form.monto_pagado === "") {
+        montoPagadoEfectivo = (esCobranza || form.metodo_pago === "fiado") ? 0 : total;
+    } else {
+        montoPagadoEfectivo = Number(form.monto_pagado);
+    }
     const saldoPendiente = esCobranza ? 0 : Math.max(0, total - montoPagadoEfectivo);
 
     const setProd = (key, campo, val) =>
@@ -163,7 +163,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
         if (esCobranza && montoPagadoEfectivo <= 0) return setError("Ingresa el monto del pago.");
         if (!esCobranza && !items.length) return setError("Ingresa al menos un producto.");
         if (!esCobranza && total < 0)     return setError("El total no puede ser negativo.");
-        if (form.fecha > hoy())           return setError("No se pueden registrar fechas futuras.");
+        if (form.fecha > hoyLocal())      return setError("No se pueden registrar fechas futuras.");
         setEnviando(true);
         try {
             await onGuardar({
@@ -173,10 +173,10 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                 items,
                 total:        esCobranza ? 0 : total,
                 monto_pagado: montoPagadoEfectivo,
-                fecha:        form.fecha,
+                fecha:        prepararFechaBackend(form.fecha),
             });
             if (!esEdicion) {
-                setForm({ cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoy() });
+                setForm({ cliente: "", metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", esCobranza: false, fecha: hoyLocal() });
             }
         } catch (err) { setError(err.response?.data?.message || "Error al guardar."); }
         finally { setEnviando(false); }
@@ -188,7 +188,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
             {/* Fecha del registro */}
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha del registro</label>
-                <input type="date" value={form.fecha} max={hoy()}
+                <input type="date" value={form.fecha} max={hoyLocal()}
                     onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))}
                     className={`${inputCls} sm:w-48`} />
             </div>
@@ -196,7 +196,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
             {/* Toggle modo cobranza */}
             {!esEdicion && (
                 <button type="button"
-                    onClick={() => setForm((p) => ({ cliente: p.cliente, metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", fecha: hoy(), esCobranza: !p.esCobranza }))}
+                    onClick={() => setForm((p) => ({ cliente: p.cliente, metodo_pago: "efectivo", descuento: 0, productos: defaultProductos, monto_pagado: "", fecha: hoyLocal(), esCobranza: !p.esCobranza }))}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-colors ${
                         esCobranza
                             ? "bg-emerald-50 border-emerald-300 text-emerald-800"
@@ -295,7 +295,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                         type="number" inputMode="numeric" min="0"
                         value={form.monto_pagado}
                         onChange={(e) => setForm((p) => ({ ...p, monto_pagado: e.target.value }))}
-                        placeholder={esCobranza ? "Ej: 5000" : formatPeso(total)}
+                        placeholder={esCobranza ? "Ej: 5000" : (form.metodo_pago === "fiado" ? "$0" : formatPeso(total))}
                         className={`w-32 text-center px-3 py-2 rounded-xl border bg-white text-slate-800 font-bold text-sm focus:outline-none focus:ring-2 ${
                             esCobranza ? "border-emerald-300 focus:ring-emerald-400" : "border-blue-200 focus:ring-blue-500"
                         }`} />
@@ -345,7 +345,8 @@ const MetodoBadge = ({ metodo }) => (
 
 // ── Accordion de días ─────────────────────────────────────────────────────
 const VentaFila = ({ venta, onEditar, onAnular }) => {
-    const saldo = Math.max(0, venta.total - (venta.monto_pagado || 0));
+    const abono = venta.monto_pagado ?? venta.total;
+    const saldo = Math.max(0, venta.total - abono);
     return (
         <div className="flex items-start justify-between py-2.5 border-b border-slate-100 last:border-0 gap-3">
             <div className="flex-1 min-w-0">

@@ -68,7 +68,6 @@ const BroadcastPage = () => {
     // Al cambiar filtro, resetear ráfaga
     useEffect(() => {
         resetearRafaga();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filtro]);
 
     // Scroll automático al cliente activo en modo ráfaga
@@ -166,7 +165,7 @@ const BroadcastPage = () => {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                     <h2 className="text-sm font-bold text-slate-700 mb-3">Filtrar destinatarios</h2>
                     <div className="flex flex-wrap gap-2 mb-4">
-                        {FILTROS.map(({ key, label, Icon }) => (
+                        {FILTROS.map(({ key, label }) => (
                             <button key={key} onClick={() => { setFiltro(key); }}
                                 disabled={rafagaActiva}
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 ${
@@ -174,7 +173,6 @@ const BroadcastPage = () => {
                                         ? "bg-blue-700 text-white border-blue-700"
                                         : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700"
                                 }`}>
-                                <Icon className="w-4 h-4" />
                                 {label}
                             </button>
                         ))}
