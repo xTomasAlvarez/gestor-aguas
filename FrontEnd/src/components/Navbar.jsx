@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useConfig } from "../context/ConfigContext";
+import ConfirmModal from "./ConfirmModal";
 
 // ── Íconos SVG minimalistas ───────────────────────────────────────────────
 const IconClientes = ({ cls }) => (
@@ -92,6 +93,7 @@ const Navbar = () => {
     const { config }          = useConfig();
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const isSuperAdmin = usuario?.rol === "superadmin";
     const isAdmin = usuario?.rol === "admin" || isSuperAdmin;
@@ -122,14 +124,15 @@ const Navbar = () => {
     return (
         <>
             {/* ── TOP BAR (desktop) ──────────────────────────────────── */}
-            <div className="pt-4 px-4 pointer-events-none sticky top-0 z-50">
-                <nav className="max-w-6xl mx-auto bg-white/70 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl pointer-events-auto transition-all">
-                    <div className="px-4 sm:px-6 flex items-center justify-between h-16">
-                        <Link to="/clientes" className="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors">
-                            <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
+            <div className="pt-4 px-4 pointer-events-none sticky top-0 z-50 flex justify-center">
+                <nav className="w-full max-w-6xl bg-white/70 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl pointer-events-auto transition-all">
+                    <div className="px-4 sm:px-6 flex items-center justify-between h-16 gap-4 lg:gap-8">
+                        {/* El min-w-0 en el padre permite que el truncate del hijo funcione correctamente evitando que rompa el flexbox */}
+                        <Link to="/clientes" className="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors flex-1 md:flex-none min-w-0 pr-2">
+                            <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
                                 {config?.nombre?.[0]?.toUpperCase() || "A"}
                             </span>
-                            {config?.nombre || "Gestion Reparto"}
+                            <span className="truncate max-w-[140px] md:max-w-[200px] lg:max-w-xs">{config?.nombre || "Gestion Reparto"}</span>
                         </Link>
 
                         {/* Desktop links */}
@@ -146,9 +149,9 @@ const Navbar = () => {
                         </ul>
 
                         {/* Usuario + logout (desktop) */}
-                        <div className="hidden sm:flex items-center gap-4">
-                            {usuario && <span className="text-sm font-semibold text-slate-600 bg-white/50 px-3 py-1.5 rounded-xl border border-white/60 shadow-sm">{usuario.nombre}</span>}
-                            <button onClick={handleLogout}
+                        <div className="hidden sm:flex items-center gap-4 shrink-0">
+                            {usuario && <span className="text-sm font-semibold text-slate-600 bg-white/50 px-3 py-1.5 rounded-xl border border-white/60 shadow-sm truncate max-w-[120px]">{usuario.nombre}</span>}
+                            <button onClick={() => setShowLogoutConfirm(true)}
                                 className="px-4 py-2 text-sm font-bold text-slate-600 border border-slate-200 bg-white/50 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shadow-sm">
                                 Salir
                             </button>
@@ -192,7 +195,7 @@ const Navbar = () => {
 
                             {/* Logout Section */}
                             <div className="px-4 py-4 mt-2 border-t border-slate-100">
-                                <button onClick={handleLogout}
+                                <button onClick={() => { setMenuAbierto(false); setShowLogoutConfirm(true); }}
                                     className="w-full text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-5 py-3 hover:bg-red-600 hover:text-white transition-all text-center">
                                     Cerrar sesión
                                 </button>
@@ -203,27 +206,38 @@ const Navbar = () => {
             </div>
 
             {/* ── BOTTOM TAB BAR (solo mobile) ───────────────────────── */}
-            <div className="sm:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/80 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl flex justify-around px-2 py-1.5 pb-safe pb-1.5 transition-all">
-                {bottomNavLinks.map((navItem) => {
-                    const active  = pathname === navItem.to;
-                    const NavIcon = navItem.Icon;
-                    return (
-                        <Link key={navItem.to} to={navItem.to}
-                            className={`flex flex-col items-center justify-center py-1.5 flex-1 relative gap-1 transition-all duration-300 rounded-xl ${
-                                active ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-                            }`}
-                        >
-                            {/* Fondo activo sutil */}
-                            {active && <span className="absolute inset-0 bg-blue-500/10 rounded-xl animate-scale-in" />}
-                            
-                            <NavIcon cls={`w-6 h-6 stroke-current relative z-10 ${active ? "stroke-2" : "stroke-[1.8]"}`} />
-                            <span className={`text-[10px] leading-none font-bold tracking-tight truncate w-full text-center px-1 relative z-10 ${active ? "text-blue-700" : "text-slate-500"}`}>
-                                {navItem.label}
-                            </span>
-                        </Link>
-                    );
-                })}
+            <div className="sm:hidden fixed bottom-4 left-0 right-0 z-40 px-4 w-full flex justify-center pointer-events-none">
+                <div className="w-full max-w-sm bg-white/80 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl grid grid-cols-6 gap-1 px-1.5 py-1.5 pb-safe pointer-events-auto transition-all">
+                    {bottomNavLinks.map((navItem) => {
+                        const active  = pathname === navItem.to;
+                        const NavIcon = navItem.Icon;
+                        return (
+                            <Link key={navItem.to} to={navItem.to}
+                                className={`flex flex-col items-center justify-center py-1.5 relative transition-all duration-300 rounded-xl ${
+                                    active ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
+                                }`}
+                            >
+                                {/* Fondo activo sutil */}
+                                {active && <span className="absolute inset-0 bg-blue-500/10 rounded-xl animate-scale-in" />}
+                                
+                                <NavIcon cls={`w-6 h-6 stroke-current relative z-10 mb-0.5 ${active ? "stroke-2" : "stroke-[1.8]"}`} />
+                                <span className={`text-[10px] leading-none font-bold tracking-tight truncate w-full text-center relative z-10 ${active ? "text-blue-700" : "text-slate-500"}`}>
+                                    {navItem.label}
+                                </span>
+                            </Link>
+                        );
+                    })}
+                </div>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={handleLogout}
+                title="Cerrar sesión"
+                message="¿Estás seguro de que deseas salir de tu cuenta?"
+                confirmLabel="Salir"
+            />
         </>
     );
 };
