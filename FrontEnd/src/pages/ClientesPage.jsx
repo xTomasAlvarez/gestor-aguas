@@ -66,7 +66,7 @@ const TelInput = ({ value, onChange }) => {
 };
 
 // ── Formulario ────────────────────────────────────────────────────────────
-const FORM_VACIO = { nombre: "", direccion: "", telefono: "", dispensersAsignados: 0 };
+const FORM_VACIO = { nombre: "", direccion: "", localidad: "", telefono: "", dispensersAsignados: 0 };
 
 const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = false }) => {
     const [form,     setForm]     = useState(inicial);
@@ -89,9 +89,10 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre *"  className={inputCls} />
                 <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Direccion" className={inputCls} />
+                <input name="localidad" value={form.localidad} onChange={handleChange} placeholder="Localidad" className={inputCls} />
             </div>
             <div className="flex gap-4 items-center bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200">
                 <div className="flex-1">
@@ -124,7 +125,7 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 
 // ── Tarjeta de cliente activo ─────────────────────────────────────────────
 const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
-    const { nombre, direccion, telefono, deuda, saldo_pendiente = 0, dispensersAsignados = 0 } = cliente;
+    const { nombre, direccion, localidad, telefono, deuda, saldo_pendiente = 0, dispensersAsignados = 0 } = cliente;
     const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
     const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo_pendiente > 0;
     const telDisplay = telefono ? `+${telefono.slice(0,2)} ${telefono.slice(2,5)} ${telefono.slice(5,8)}-${telefono.slice(8)}` : null;
@@ -137,7 +138,11 @@ const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
                         {nombre}
                         {dispensersAsignados > 0 && <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[10px] uppercase font-black tracking-wider rounded">Eq: {dispensersAsignados}</span>}
                     </h2>
-                    {direccion  && <p className="text-sm text-slate-500 mt-0.5">{direccion}</p>}
+                    {(direccion || localidad) && (
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {direccion}{direccion && localidad ? " - " : ""}{localidad}
+                        </p>
+                    )}
                     {telDisplay && <a href={`tel:+${telefono}`} className="text-sm text-blue-600 hover:underline mt-0.5 block font-mono">{telDisplay}</a>}
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${tieneDeuda ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
@@ -234,7 +239,11 @@ const ModalInactivos = ({ onReactivar }) => {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-slate-600 truncate">{c.nombre}</p>
-                                {c.direccion && <p className="text-xs text-slate-400 truncate">{c.direccion}</p>}
+                                {(c.direccion || c.localidad) && (
+                                    <p className="text-xs text-slate-400 truncate">
+                                        {c.direccion}{c.direccion && c.localidad ? " - " : ""}{c.localidad}
+                                    </p>
+                                )}
                             </div>
                             <button
                                 onClick={() => handleReactivar(c)}
@@ -359,7 +368,7 @@ const ClientesPage = () => {
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar cliente">
                 {editando && (
                     <FormCliente
-                        inicial={{ nombre: editando.nombre, direccion: editando.direccion || "", telefono: editando.telefono || "", dispensersAsignados: editando.dispensersAsignados || 0 }}
+                        inicial={{ nombre: editando.nombre, direccion: editando.direccion || "", localidad: editando.localidad || "", telefono: editando.telefono || "", dispensersAsignados: editando.dispensersAsignados || 0 }}
                         onGuardar={handleEditar}
                         onCancelar={() => setEditando(null)}
                         esEdicion

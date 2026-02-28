@@ -31,6 +31,11 @@ const clienteSchema = new Schema(
             trim:    true,
             default: null,
         },
+        localidad: {
+            type:    String,
+            trim:    true,
+            default: "",
+        },
         deuda: {
             type:    deudaSchema,
             default: () => ({}), // Inicializa con todos los campos en 0

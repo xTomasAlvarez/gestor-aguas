@@ -120,7 +120,11 @@ const ClienteSearch = ({ clientes, value, onChange }) => {
                                 i === highlight ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-800"
                             }`}>
                             <span className="font-semibold">{c.nombre}</span>
-                            {c.direccion && <span className="text-xs text-slate-400 ml-2">{c.direccion}</span>}
+                            {(c.direccion || c.localidad) && (
+                                <span className="text-xs text-slate-400 ml-2">
+                                    {c.direccion}{c.direccion && c.localidad ? " - " : ""}{c.localidad}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -365,8 +369,10 @@ const VentaFila = ({ venta, onEditar, onAnular }) => {
             <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                     <p className="text-base font-bold text-slate-800 truncate leading-tight">{venta.cliente?.nombre || "Cliente no disponible"}</p>
-                    {venta.cliente?.direccion && (
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">{venta.cliente.direccion}</p>
+                    {(venta.cliente?.direccion || venta.cliente?.localidad) && (
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                            {venta.cliente.direccion}{venta.cliente.direccion && venta.cliente.localidad ? " - " : ""}{venta.cliente.localidad}
+                        </p>
                     )}
                     <span className="text-[10px] text-slate-400 mt-1 block font-medium uppercase tracking-wider">{formatFecha(venta.fecha)}</span>
                 </div>

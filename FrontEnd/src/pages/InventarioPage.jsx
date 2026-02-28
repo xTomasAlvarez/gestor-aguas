@@ -114,13 +114,13 @@ const InventarioPage = () => {
                                     </div>
                                     {!isEditing ? (
                                         <button onClick={() => iniciarEdicion(key, data)}
-                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition-colors">
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors">
                                             Ajustar Base
                                         </button>
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => setEditMode(null)} className="text-xs font-bold px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors">Cancelar</button>
-                                            <button onClick={() => guardarEdicion(key)} className={`text-xs font-bold px-3 py-1.5 rounded-lg bg-${info.color}-600 hover:bg-${info.color}-700 text-white shadow-sm transition-colors`}>Guardar</button>
+                                            <button onClick={() => guardarEdicion(key)} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors">Guardar</button>
                                         </div>
                                     )}
                                 </div>
