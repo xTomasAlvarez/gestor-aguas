@@ -94,6 +94,7 @@ const Navbar = () => {
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showUserMenuDesktop, setShowUserMenuDesktop] = useState(false);
 
     const isSuperAdmin = usuario?.rol === "superadmin";
     const isAdmin = usuario?.rol === "admin" || isSuperAdmin;
@@ -128,12 +129,47 @@ const Navbar = () => {
                 <nav className="w-full max-w-6xl bg-white/70 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl pointer-events-auto transition-all">
                     <div className="px-4 sm:px-6 flex items-center justify-between h-16 gap-4 lg:gap-8">
                         {/* El min-w-0 en el padre permite que el truncate del hijo funcione correctamente evitando que rompa el flexbox */}
-                        <Link to="/clientes" className="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors flex-1 md:flex-none min-w-0 pr-2">
-                            <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
-                                {config?.nombre?.[0]?.toUpperCase() || "A"}
-                            </span>
-                            <span className="truncate max-w-[140px] md:max-w-[200px] lg:max-w-xs">{config?.nombre || "Gestion Reparto"}</span>
-                        </Link>
+                        <div className="relative flex-1 md:flex-none min-w-0">
+                            {/* Logo Mobile (Link a /clientes) */}
+                            <Link to="/clientes" className="sm:hidden flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors w-full text-left pr-2 outline-none">
+                                <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
+                                    {config?.nombre?.[0]?.toUpperCase() || "A"}
+                                </span>
+                                <span className="truncate">{config?.nombre || "Gestion Reparto"}</span>
+                            </Link>
+
+                            {/* Logo Desktop (Botón Toggle Menú Usuario) */}
+                            <button 
+                                onClick={() => setShowUserMenuDesktop((p) => !p)}
+                                className="hidden sm:flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors w-full text-left pr-2 outline-none">
+                                <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
+                                    {config?.nombre?.[0]?.toUpperCase() || "A"}
+                                </span>
+                                <span className="truncate max-w-[140px] md:max-w-[200px] lg:max-w-xs">{config?.nombre || "Gestion Reparto"}</span>
+                                <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.5} className={`w-3.5 h-3.5 stroke-slate-400 transition-transform ${showUserMenuDesktop ? 'rotate-180' : ''}`}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {/* Desktop User Dropdown (ligado al logo) */}
+                            {showUserMenuDesktop && (
+                                <div className="absolute top-full left-0 mt-5 w-64 bg-white/95 backdrop-blur-xl border border-white/60 shadow-premium rounded-3xl overflow-hidden animate-scale-in origin-top-left z-50 hidden sm:block">
+                                    <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100/60">
+                                        <p className="text-sm font-black text-slate-800 font-display truncate">{usuario?.nombre}</p>
+                                        <p className="text-xs font-semibold text-slate-500 mt-0.5 truncate">{usuario?.email}</p>
+                                    </div>
+                                    <div className="p-2">
+                                        <button onClick={() => { setShowUserMenuDesktop(false); setShowLogoutConfirm(true); }}
+                                            className="w-full flex items-center justify-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-xl px-4 py-3 transition-colors">
+                                            <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} className="w-4 h-4 stroke-current">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Cerrar sesión
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Desktop links */}
                         <ul className="hidden sm:flex items-center gap-1.5">
@@ -148,14 +184,7 @@ const Navbar = () => {
                             ))}
                         </ul>
 
-                        {/* Usuario + logout (desktop) */}
-                        <div className="hidden sm:flex items-center gap-4 shrink-0">
-                            {usuario && <span className="text-sm font-semibold text-slate-600 bg-white/50 px-3 py-1.5 rounded-xl border border-white/60 shadow-sm truncate max-w-[120px]">{usuario.nombre}</span>}
-                            <button onClick={() => setShowLogoutConfirm(true)}
-                                className="px-4 py-2 text-sm font-bold text-slate-600 border border-slate-200 bg-white/50 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shadow-sm">
-                                Salir
-                            </button>
-                        </div>
+                        <div className="hidden sm:flex items-center gap-4 shrink-0 min-w-[24px]"></div>
 
                         {/* Mobile: Hamburger Menu Button */}
                         <button
