@@ -3,6 +3,8 @@ import {
     obtenerClientes, crearCliente, actualizarCliente, eliminarCliente,
     obtenerInactivos, toggleEstadoCliente,
 } from "../services/clienteService";
+import { obtenerVentas } from "../services/ventasService";
+import { formatFecha, formatPeso } from "../utils/format";
 import Modal        from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast        from "react-hot-toast";
@@ -124,7 +126,7 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
 };
 
 // ── Tarjeta de cliente activo ─────────────────────────────────────────────
-const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
+const ClienteCard = ({ cliente, onEditar, onDesactivar, onVerHistorico }) => {
     const { nombre, direccion, localidad, telefono, deuda, saldo_pendiente = 0, dispensersAsignados = 0 } = cliente;
     const { bidones_20L = 0, bidones_12L = 0, sodas = 0 } = deuda || {};
     const tieneDeuda = bidones_20L > 0 || bidones_12L > 0 || sodas > 0 || saldo_pendiente > 0;
@@ -173,6 +175,7 @@ const ClienteCard = ({ cliente, onEditar, onDesactivar }) => {
             )}
             <div className="flex gap-2 pt-1 border-t border-slate-100">
                 <button onClick={() => onEditar(cliente)} className={btnSecondary}>Editar</button>
+                <button onClick={() => onVerHistorico(cliente)} className={btnSecondary}>Fiados</button>
                 <button onClick={() => onDesactivar(cliente)}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
                     <Archive className="w-3.5 h-3.5" />
@@ -260,13 +263,73 @@ const ModalInactivos = ({ onReactivar }) => {
     );
 };
 
+// ── Modal Historial de Fiados ─────────────────────────────────────────────
+const ModalHistorialFiados = ({ cliente }) => {
+    const [ventas, setVentas] = useState([]);
+    const [cargando, setCargando] = useState(true);
+
+    useEffect(() => {
+        const cargar = async () => {
+            try {
+                setCargando(true);
+                const { data } = await obtenerVentas();
+                // Filtrar ventas del cliente específico que tengan deuda de dinero o envases reteniéndose
+                const fiados = data.filter(v => 
+                    (v.cliente?._id === cliente._id || v.cliente === cliente._id) && 
+                    ((v.total - (v.monto_pagado ?? v.total) > 0) || v.metodo_pago === "fiado")
+                );
+                setVentas(fiados);
+            } catch (err) {
+                toast.error("Error al cargar el historial de fiados");
+            } finally {
+                setCargando(false);
+            }
+        };
+        if (cliente) cargar();
+    }, [cliente]);
+
+    if (cargando) return <p className="text-center py-6 text-sm text-slate-400">Cargando historial...</p>;
+    if (ventas.length === 0) return <p className="text-center py-6 text-sm text-slate-400">Este cliente no tiene tickets impagos registrados.</p>;
+
+    return (
+        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-1">
+            {ventas.map(v => {
+                const abono = v.monto_pagado ?? v.total;
+                const saldo = Math.max(0, v.total - abono);
+                const tieneEnvases = v.metodo_pago === "fiado" && v.items.length > 0;
+                
+                return (
+                    <div key={v._id} className="bg-white border border-red-100 rounded-xl p-4 shadow-sm relative">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{formatFecha(v.fecha)}</span>
+                            {saldo > 0 && <span className="text-lg font-black text-red-600 leading-none">{formatPeso(saldo)}</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2 transition-all">
+                            {v.items.length === 0 && <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Cobranza (saldo remanente)</span>}
+                            {v.items.map((item, i) => (
+                                <span key={i} className="text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md">
+                                    {item.cantidad}x {item.producto}
+                                </span>
+                            ))}
+                            {tieneEnvases && <span className="text-[11px] font-bold text-red-500 ml-1 mt-0.5">*(Envases en Mora)</span>}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 // ── Página principal ──────────────────────────────────────────────────────
 const ClientesPage = () => {
     const [clientes,       setClientes]       = useState([]);
     const [busqueda,       setBusqueda]       = useState("");
+    const [filtroLocalidad,setFiltroLocalidad] = useState("Todas");
+    const [filtroEstado,   setFiltroEstado]   = useState("Todos");
     const [cargando,       setCargando]       = useState(true);
     const [error,          setError]          = useState(null);
     const [editando,       setEditando]       = useState(null);
+    const [clienteHistorial,setClienteHistorial] = useState(null);
     const [modalInactivos, setModalInactivos] = useState(false);
     const [confirmarDesact,setConfirmarDesact] = useState(null); // cliente a desactivar
 
@@ -327,6 +390,23 @@ const ClientesPage = () => {
         setClientes((p) => [clienteReactivado, ...p].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     };
 
+    // ── Lógica de Filtrado Local ──
+    const localidadesUnicas = ["Todas", ...new Set(clientes.map(c => c.localidad).filter(Boolean))].sort();
+
+    const clientesFiltrados = clientes.filter((c) => {
+        const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
+        const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
+        let matchEst = true;
+        if (filtroEstado === "Con Deuda") {
+            const d = c.deuda || {};
+            matchEst = d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0);
+        } else if (filtroEstado === "Al Día") {
+            const d = c.deuda || {};
+            matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
+        }
+        return matchBusqueda && matchLoc && matchEst;
+    });
+
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
             <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between">
@@ -346,20 +426,33 @@ const ClientesPage = () => {
                 <FormCliente onGuardar={handleCrear} />
             </div>
 
-            <div className="max-w-6xl mx-auto mb-5">
+            <div className="max-w-6xl mx-auto mb-5 flex flex-col sm:flex-row gap-3">
                 <input type="text" placeholder="Buscar por nombre..." value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
-                    className="w-full sm:w-72 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm" />
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm border-b-2 border-b-blue-500/0 hover:border-b-blue-500/20" />
+                
+                <select value={filtroLocalidad} onChange={e => setFiltroLocalidad(e.target.value)}
+                    className="sm:w-48 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer font-medium text-sm">
+                    {localidadesUnicas.map(loc => <option key={loc} value={loc}>{loc === "Todas" ? "Todas las localidades" : loc}</option>)}
+                </select>
+
+                <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
+                    className="sm:w-40 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer font-medium text-sm">
+                    <option value="Todos">Todos</option>
+                    <option value="Con Deuda">Con Deuda</option>
+                    <option value="Al Día">Al Día</option>
+                </select>
             </div>
 
             {cargando && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">Cargando clientes...</p>}
             {error && !cargando && <div className="max-w-6xl mx-auto bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
-            {!cargando && !error && clientes.length === 0 && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">No se encontraron clientes activos.</p>}
-            {!cargando && !error && clientes.length > 0 && (
+            {!cargando && !error && clientesFiltrados.length === 0 && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">No se encontraron clientes activos con los filtros aplicados.</p>}
+            {!cargando && !error && clientesFiltrados.length > 0 && (
                 <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {clientes.map((c) => (
+                    {clientesFiltrados.map((c) => (
                         <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
-                            onDesactivar={(cli) => setConfirmarDesact(cli)} />
+                            onDesactivar={(cli) => setConfirmarDesact(cli)}
+                            onVerHistorico={setClienteHistorial} />
                     ))}
                 </div>
             )}
@@ -374,6 +467,11 @@ const ClientesPage = () => {
                         esEdicion
                     />
                 )}
+            </Modal>
+
+            {/* Modal Historial de Fiados */}
+            <Modal isOpen={!!clienteHistorial} onClose={() => setClienteHistorial(null)} title={`Trazabilidad de Deuda: ${clienteHistorial?.nombre}`}>
+                {clienteHistorial && <ModalHistorialFiados cliente={clienteHistorial} />}
             </Modal>
 
             {/* Modal inactivos */}
