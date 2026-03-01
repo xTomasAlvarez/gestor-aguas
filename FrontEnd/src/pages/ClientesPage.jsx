@@ -23,6 +23,10 @@ const ClientesPage = () => {
     const [clienteHistorial,setClienteHistorial] = useState(null);
     const [modalInactivos, setModalInactivos] = useState(false);
     const [confirmarDesact,setConfirmarDesact] = useState(null); // cliente a desactivar
+    
+    // Estados de paginación
+    const [paginaActual,   setPaginaActual]   = useState(1);
+    const [itemsPorPagina, setItemsPorPagina] = useState(10);
 
     const cargar = useCallback(async (nombre = "") => {
         try {
@@ -38,6 +42,11 @@ const ClientesPage = () => {
         const t = setTimeout(() => cargar(busqueda), 350);
         return () => clearTimeout(t);
     }, [busqueda, cargar]);
+
+    // Resetear a página 1 cuando cambien los filtros
+    useEffect(() => {
+        setPaginaActual(1);
+    }, [busqueda, filtroLocalidad, filtroEstado, itemsPorPagina]);
 
     const handleCrear = async (form) => {
         const tid = toast.loading("Guardando cliente...");
@@ -98,6 +107,12 @@ const ClientesPage = () => {
         return matchBusqueda && matchLoc && matchEst;
     });
 
+    // Paginación matemática
+    const totalPaginas = Math.ceil(clientesFiltrados.length / itemsPorPagina);
+    const indiceInicio = (paginaActual - 1) * itemsPorPagina;
+    const indiceFin = indiceInicio + itemsPorPagina;
+    const clientesPaginados = clientesFiltrados.slice(indiceInicio, indiceFin);
+
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
             <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between">
@@ -139,13 +154,55 @@ const ClientesPage = () => {
             {error && !cargando && <div className="max-w-6xl mx-auto bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
             {!cargando && !error && clientesFiltrados.length === 0 && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">No se encontraron clientes activos con los filtros aplicados.</p>}
             {!cargando && !error && clientesFiltrados.length > 0 && (
-                <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {clientesFiltrados.map((c) => (
-                        <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
-                            onDesactivar={(cli) => setConfirmarDesact(cli)}
-                            onVerHistorico={setClienteHistorial} />
-                    ))}
-                </div>
+                <>
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {clientesPaginados.map((c) => (
+                            <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
+                                onDesactivar={(cli) => setConfirmarDesact(cli)}
+                                onVerHistorico={setClienteHistorial} />
+                        ))}
+                    </div>
+
+                    <div className="max-w-6xl mx-auto mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 sm:px-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-slate-500">Mostrar</span>
+                            <select 
+                                value={itemsPorPagina} 
+                                onChange={(e) => setItemsPorPagina(Number(e.target.value))}
+                                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                            </select>
+                            <span className="text-sm font-medium text-slate-500">por página</span>
+                        </div>
+
+                        <div className="text-sm font-semibold text-slate-600">
+                            Mostrando {indiceInicio + 1} a {Math.min(indiceFin, clientesFiltrados.length)} de {clientesFiltrados.length} clientes
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                                disabled={paginaActual === 1}
+                                className="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-sm font-bold text-slate-800 px-2 text-center min-w-[3rem]">
+                                {paginaActual} / {totalPaginas}
+                            </span>
+                            <button 
+                                onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                                disabled={paginaActual === totalPaginas || totalPaginas === 0}
+                                className="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* Modal edición */}
