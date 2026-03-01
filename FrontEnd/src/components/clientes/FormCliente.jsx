@@ -26,7 +26,7 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre *"  className={inputCls} />
+                <input name="nombre"    value={form.nombre}    onChange={handleChange} placeholder="Nombre y apellido *"  className={inputCls} />
                 <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Direccion" className={inputCls} />
                 <input name="localidad" value={form.localidad} onChange={handleChange} placeholder="Localidad" className={inputCls} />
             </div>
