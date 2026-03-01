@@ -8,7 +8,7 @@ const ConfigContext = createContext(null);
 export const ConfigProvider = ({ children }) => {
     const { usuario } = useAuth();
     const [config, setConfig] = useState({
-        nombre: "App Reparto",
+        nombre: "H2APP",
         logo: null,
         telefono: null,
         productos: [],
@@ -28,7 +28,7 @@ export const ConfigProvider = ({ children }) => {
                 const { data } = await api.get("/config");
                 if (mounted) {
                     setConfig({
-                        nombre:    data.nombre || "App Reparto",
+                        nombre:    data.nombre || "H2APP",
                         logo:      data.logo || null,
                         telefono:  data.telefono || null,
                         productos: data.productos || [],
@@ -50,7 +50,7 @@ export const ConfigProvider = ({ children }) => {
             setConfig(p => ({ ...p, cargando: true }));
             const { data } = await api.get("/config");
             setConfig({
-                nombre:    data.nombre || "App Reparto",
+                nombre:    data.nombre || "H2APP",
                 logo:      data.logo || null,
                 telefono:  data.telefono || null,
                 productos: data.productos || [],

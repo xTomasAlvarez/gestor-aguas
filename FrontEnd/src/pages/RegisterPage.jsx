@@ -100,7 +100,7 @@ const RegisterPage = () => {
             <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
                 <div className="w-full max-w-sm">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
+                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">H2APP</h1>
                         <p className="text-sm text-slate-500 mt-2">¿Cómo queres unirte?</p>
                     </div>
                     <div className="flex flex-col gap-3">
@@ -143,7 +143,7 @@ const RegisterPage = () => {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-sm">
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">H2APP</h1>
                     <p className="text-sm text-slate-500 mt-1">
                         {modo === MODOS.empleado ? "Unirme a una empresa" : "Crear empresa nueva"}
                     </p>

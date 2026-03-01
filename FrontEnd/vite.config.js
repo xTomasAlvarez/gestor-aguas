@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.png', 'pwa-512.png'],
       manifest: {
-        name: 'Gestor Aguas',
-        short_name: 'Gestor Aguas',
+        name: 'H2APP',
+        short_name: 'H2APP',
         description: 'Gestión de reparto de agua',
         theme_color: '#1e3a5f',
         background_color: '#f8fafc',

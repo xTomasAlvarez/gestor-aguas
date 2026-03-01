@@ -1,6 +1,6 @@
-# 🚚 App Reparto (SaaS B2B)
+# 🚚 H2APP (SaaS B2B)
 
-**App Reparto** es una plataforma integral de gestión logística y ventas en ruta (Software as a Service) diseñada específicamente para empresas de reparto de bidones de agua, soda y productos afines. Construida sobre el stack **MERN** (MongoDB, Express, React, Node.js), la aplicación adopta un enfoque _Mobile-First_ para facilitar el trabajo ágil de los repartidores en la calle, mientras otorga a los administradores un panel de control completo y robusto.
+**H2APP** es una plataforma integral de gestión logística y ventas en ruta (Software as a Service) diseñada específicamente para empresas de reparto de bidones de agua, soda y productos afines. Construida sobre el stack **MERN** (MongoDB, Express, React, Node.js), la aplicación adopta un enfoque _Mobile-First_ para facilitar el trabajo ágil de los repartidores en la calle, mientras otorga a los administradores un panel de control completo y robusto.
 
 ---
 

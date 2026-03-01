@@ -1,4 +1,4 @@
-# ⚙️ README_TECNICO.md - App Reparto (Core Architecture)
+# ⚙️ README_TECNICO.md - H2APP (Core Architecture)
 
 Este documento detalla la estructura lógica profunda de la aplicación de Logística de Reparto (Stack: `MERN`). Está destinado a futuros ingenieros de software, DevOps o desarrolladores del núcleo del producto.
 
