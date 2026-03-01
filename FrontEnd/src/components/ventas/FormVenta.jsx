@@ -19,6 +19,7 @@ const calcTotal = (prods, descuento) =>
     calcItems(prods).reduce((a, i) => a + i.subtotal, 0) - Number(descuento || 0);
 
 const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, esEdicion = false }) => {
+    // Generar un estado por default basado en los productos dinámicos
     const defaultProductos = {};
     productosBase.forEach(p => { defaultProductos[p.key] = { cantidad: 0, precio_unitario: p.precioDefault }; });
     
@@ -33,6 +34,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
     const items      = esCobranza ? [] : calcItems(form.productos);
     const total      = esCobranza ? 0  : calcTotal(form.productos, form.descuento);
 
+    // monto_pagado efectivo: si está vacío y no es cobranza, default = total (salvo fiado)
     let montoPagadoEfectivo;
     if (form.monto_pagado === "") {
         montoPagadoEfectivo = (esCobranza || form.metodo_pago === "fiado") ? 0 : total;
@@ -99,7 +101,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                 </button>
             )}
 
-            {/* Cliente + Método */}
+            {/* Cliente + Método (método oculto en cobranza) */}
             <div className={`grid grid-cols-1 gap-3 ${!esCobranza ? "sm:grid-cols-2" : ""}`}>
                 <ClienteSearch clientes={clientes} value={form.cliente}
                     onChange={(id) => setForm((p) => ({ ...p, cliente: id }))} />
@@ -115,7 +117,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                 )}
             </div>
 
-            {/* Productos */}
+            {/* Productos (ocultos en modo cobranza) */}
             {!esCobranza && (
                 <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Productos</p>
@@ -166,7 +168,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                 </div>
             )}
 
-            {/* Descuento + Totales */}
+            {/* Descuento + Totales (ocultos en cobranza) */}
             {!esCobranza && (
                 <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -182,7 +184,7 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, inicial, es
                 </div>
             )}
 
-            {/* Monto pagado */}
+            {/* Monto pagado / Campo de cobranza */}
             <div className={`rounded-xl px-4 py-3 flex flex-col gap-2 border ${
                 esCobranza ? "bg-emerald-50 border-emerald-200" : "bg-blue-50 border-blue-100"
             }`}>
