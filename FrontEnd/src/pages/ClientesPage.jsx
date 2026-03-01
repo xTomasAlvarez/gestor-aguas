@@ -11,7 +11,6 @@ import FormCliente from "../components/clientes/FormCliente";
 import ClienteCard from "../components/clientes/ClienteCard";
 import ModalInactivos from "../components/clientes/ModalInactivos";
 import ModalHistorialFiados from "../components/clientes/ModalHistorialFiados";
-
 // ── Página principal ──────────────────────────────────────────────────────
 const ClientesPage = () => {
     const [clientes,       setClientes]       = useState([]);

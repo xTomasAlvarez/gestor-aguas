@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useConfig } from "../context/ConfigContext";
+import ConfirmModal from "./ConfirmModal";
 
 // ── Íconos SVG minimalistas ───────────────────────────────────────────────
 const IconClientes = ({ cls }) => (
@@ -92,6 +93,8 @@ const Navbar = () => {
     const { config }          = useConfig();
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showUserMenuDesktop, setShowUserMenuDesktop] = useState(false);
 
     const isSuperAdmin = usuario?.rol === "superadmin";
     const isAdmin = usuario?.rol === "admin" || isSuperAdmin;
@@ -122,104 +125,148 @@ const Navbar = () => {
     return (
         <>
             {/* ── TOP BAR (desktop) ──────────────────────────────────── */}
-            <nav className="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
-                <div className="max-w-6xl mx-auto px-4 sm:px-8 flex items-center justify-between h-14">
-                    <Link to="/clientes" className="flex items-center gap-2 font-extrabold text-base tracking-tight text-white hover:text-blue-400 transition-colors">
-                        <span className="w-6 h-6 rounded bg-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-inner">
-                            {config?.nombre?.[0]?.toUpperCase() || "A"}
-                        </span>
-                        {config?.nombre || "Gestion Reparto"}
-                    </Link>
+            <div className="pt-4 px-4 pointer-events-none sticky top-0 z-50 flex justify-center">
+                <nav className="w-full max-w-6xl bg-white/70 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl pointer-events-auto transition-all">
+                    <div className="px-4 sm:px-6 flex items-center justify-between h-16 gap-4 lg:gap-8">
+                        {/* El min-w-0 en el padre permite que el truncate del hijo funcione correctamente evitando que rompa el flexbox */}
+                        <div className="relative flex-1 md:flex-none min-w-0">
+                            {/* Logo Mobile (Link a /clientes) */}
+                            <Link to="/clientes" className="sm:hidden flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors w-full text-left pr-2 outline-none">
+                                <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
+                                    {config?.nombre?.[0]?.toUpperCase() || "A"}
+                                </span>
+                                <span className="truncate">{config?.nombre || "Gestion Reparto"}</span>
+                            </Link>
 
-                    {/* Desktop links */}
-                    <ul className="hidden sm:flex gap-1">
-                        {navLinks.map(({ to, label }) => (
-                            <li key={to}>
-                                <Link to={to} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    pathname === to
-                                        ? "bg-blue-700 text-white"
-                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
-                                }`}>{label}</Link>
-                            </li>
-                        ))}
-                    </ul>
+                            {/* Logo Desktop (Botón Toggle Menú Usuario) */}
+                            <button 
+                                onClick={() => setShowUserMenuDesktop((p) => !p)}
+                                className="hidden sm:flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-slate-800 hover:text-blue-600 transition-colors w-full text-left pr-2 outline-none">
+                                <span className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-sm font-black text-white shadow-md">
+                                    {config?.nombre?.[0]?.toUpperCase() || "A"}
+                                </span>
+                                <span className="truncate max-w-[140px] md:max-w-[200px] lg:max-w-xs">{config?.nombre || "Gestion Reparto"}</span>
+                                <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.5} className={`w-3.5 h-3.5 stroke-slate-400 transition-transform ${showUserMenuDesktop ? 'rotate-180' : ''}`}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
 
-                    {/* Usuario + logout (desktop) */}
-                    <div className="hidden sm:flex items-center gap-3">
-                        {usuario && <span className="text-xs text-slate-400">{usuario.nombre}</span>}
-                        <button onClick={handleLogout}
-                            className="px-3 py-1.5 text-xs font-semibold text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 hover:text-white transition-colors">
-                            Cerrar sesion
+                            {/* Desktop User Dropdown (ligado al logo) */}
+                            {showUserMenuDesktop && (
+                                <div className="absolute top-full left-0 mt-5 w-64 bg-white/95 backdrop-blur-xl border border-white/60 shadow-premium rounded-3xl overflow-hidden animate-scale-in origin-top-left z-50 hidden sm:block">
+                                    <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100/60">
+                                        <p className="text-sm font-black text-slate-800 font-display truncate">{usuario?.nombre}</p>
+                                        <p className="text-xs font-semibold text-slate-500 mt-0.5 truncate">{usuario?.email}</p>
+                                    </div>
+                                    <div className="p-2">
+                                        <button onClick={() => { setShowUserMenuDesktop(false); setShowLogoutConfirm(true); }}
+                                            className="w-full flex items-center justify-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-xl px-4 py-3 transition-colors">
+                                            <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} className="w-4 h-4 stroke-current">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Cerrar sesión
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Desktop links */}
+                        <ul className="hidden sm:flex items-center gap-1.5">
+                            {navLinks.map(({ to, label }) => (
+                                <li key={to}>
+                                    <Link to={to} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                                        pathname === to
+                                            ? "bg-blue-600 shadow-md text-white -translate-y-0.5"
+                                            : "text-slate-600 hover:bg-white/60 hover:text-blue-700"
+                                    }`}>{label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="hidden sm:flex items-center gap-4 shrink-0 min-w-[24px]"></div>
+
+                        {/* Mobile: Hamburger Menu Button */}
+                        <button
+                            className="sm:hidden flex items-center justify-center p-2 rounded-xl text-slate-600 hover:text-blue-600 bg-white/50 border border-white/60 shadow-sm transition-colors"
+                            onClick={() => setMenuAbierto((p) => !p)}
+                        >
+                            <IconMenu cls="w-6 h-6 stroke-current" />
                         </button>
                     </div>
 
-                    {/* Mobile: Hamburger Menu Button */}
-                    <button
-                        className="sm:hidden flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                        onClick={() => setMenuAbierto((p) => !p)}
-                    >
-                        <IconMenu cls="w-6 h-6 stroke-current" />
-                    </button>
-                </div>
+                    {/* Mobile: Drawer / Dropdown */}
+                    {menuAbierto && (
+                        <div className="sm:hidden bg-white/95 backdrop-blur-xl border-t border-slate-100 rounded-b-2xl shadow-premium relative w-full overflow-hidden animate-fade-in-up">
+                            {/* Información del Usuario */}
+                            <div className="px-5 py-4 bg-slate-50 border-b border-slate-100">
+                                <p className="text-sm font-bold text-slate-800 font-display">{usuario?.nombre}</p>
+                                <p className="text-xs font-semibold text-slate-500 mt-0.5">{usuario?.email}</p>
+                            </div>
+                            
+                            {/* Links Secundarios */}
+                            <div className="flex flex-col py-3 px-3 gap-1">
+                                {drawerNavLinks.map((navItem) => {
+                                    const active = pathname === navItem.to;
+                                    const DrawerIcon = navItem.Icon;
+                                    return (
+                                        <Link key={navItem.to} to={navItem.to} onClick={() => setMenuAbierto(false)}
+                                            className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-colors ${
+                                                active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <DrawerIcon cls="w-5 h-5 stroke-current" />
+                                            {navItem.label}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
 
-                {/* Mobile: Drawer / Dropdown */}
-                {menuAbierto && (
-                    <div className="sm:hidden bg-slate-800 border-t border-slate-700 shadow-2xl relative w-full z-50 overflow-hidden">
-                        {/* Información del Usuario */}
-                        <div className="px-5 py-4 bg-slate-900/40 border-b border-slate-700 font-medium">
-                            <p className="text-sm font-bold text-white tracking-wide">{usuario?.nombre}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{usuario?.email}</p>
+                            {/* Logout Section */}
+                            <div className="px-4 py-4 mt-2 border-t border-slate-100">
+                                <button onClick={() => { setMenuAbierto(false); setShowLogoutConfirm(true); }}
+                                    className="w-full text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-5 py-3 hover:bg-red-600 hover:text-white transition-all text-center">
+                                    Cerrar sesión
+                                </button>
+                            </div>
                         </div>
-                        
-                        {/* Links Secundarios */}
-                        <div className="flex flex-col py-2 px-3 gap-1">
-                            {drawerNavLinks.map((navItem) => {
-                                const active = pathname === navItem.to;
-                                const DrawerIcon = navItem.Icon;
-                                return (
-                                    <Link key={navItem.to} to={navItem.to} onClick={() => setMenuAbierto(false)}
-                                        className={`flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                                            active ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-slate-700"
-                                        }`}
-                                    >
-                                        <DrawerIcon cls="w-5 h-5 stroke-current" />
-                                        {navItem.label}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-
-                        {/* Logout Section */}
-                        <div className="px-4 py-4 mt-2 border-t border-slate-700 flex justify-end">
-                            <button onClick={handleLogout}
-                                className="text-sm font-bold text-red-400 bg-red-400/10 border border-red-500/20 rounded-xl px-5 py-2.5 hover:bg-red-500 hover:text-white transition-colors w-full sm:w-auto text-center">
-                                Cerrar sesión
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </nav>
+                    )}
+                </nav>
+            </div>
 
             {/* ── BOTTOM TAB BAR (solo mobile) ───────────────────────── */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex justify-around px-1 pb-safe">
-                {bottomNavLinks.map((navItem) => {
-                    const active  = pathname === navItem.to;
-                    const NavIcon = navItem.Icon;
-                    return (
-                        <Link key={navItem.to} to={navItem.to}
-                            className={`flex flex-col items-center justify-center py-2 flex-1 relative gap-[3px] transition-colors ${
-                                active ? "text-blue-400" : "text-slate-500 hover:text-slate-400"
-                            }`}
-                        >
-                            <NavIcon cls={`w-6 h-6 stroke-current ${active ? "stroke-2" : "stroke-[1.6]"}`} />
-                            <span className={`text-[9.5px] leading-tight font-semibold tracking-tight truncate w-full text-center px-1 ${active ? "text-blue-400" : "text-slate-500"}`}>
-                                {navItem.label}
-                            </span>
-                            {active && <span className="absolute bottom-0 w-8 h-[3px] bg-blue-500 rounded-t-full" />}
-                        </Link>
-                    );
-                })}
+            <div className="sm:hidden fixed bottom-4 left-0 right-0 z-40 px-4 w-full flex justify-center pointer-events-none">
+                <div className="w-full max-w-sm bg-white/80 backdrop-blur-md border border-white/60 shadow-glass rounded-2xl grid grid-cols-6 gap-1 px-1.5 py-1.5 pb-safe pointer-events-auto transition-all">
+                    {bottomNavLinks.map((navItem) => {
+                        const active  = pathname === navItem.to;
+                        const NavIcon = navItem.Icon;
+                        return (
+                            <Link key={navItem.to} to={navItem.to}
+                                className={`flex flex-col items-center justify-center py-1.5 relative transition-all duration-300 rounded-xl ${
+                                    active ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
+                                }`}
+                            >
+                                {/* Fondo activo sutil */}
+                                {active && <span className="absolute inset-0 bg-blue-500/10 rounded-xl animate-scale-in" />}
+                                
+                                <NavIcon cls={`w-6 h-6 stroke-current relative z-10 mb-0.5 ${active ? "stroke-2" : "stroke-[1.8]"}`} />
+                                <span className={`text-[10px] leading-none font-bold tracking-tight truncate w-full text-center relative z-10 ${active ? "text-blue-700" : "text-slate-500"}`}>
+                                    {navItem.label}
+                                </span>
+                            </Link>
+                        );
+                    })}
+                </div>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={handleLogout}
+                title="Cerrar sesión"
+                message="¿Estás seguro de que deseas salir de tu cuenta?"
+                confirmLabel="Salir"
+            />
         </>
     );
 };

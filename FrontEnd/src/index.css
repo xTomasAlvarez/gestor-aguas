@@ -4,6 +4,26 @@
 
 @layer base {
   body {
+    /* Fondo atmosférico en lugar de gris plano */
     @apply bg-slate-50 text-slate-800 font-sans antialiased;
+    background-image: radial-gradient(circle at 50% 0%, rgba(224, 242, 254, 0.4), transparent 80%);
+    background-attachment: fixed;
   }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-slate-800;
+  }
+}
+
+@layer utilities {
+  .backdrop-blur-md {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  /* Retrasos escalonados para las iteraciones */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
 }
