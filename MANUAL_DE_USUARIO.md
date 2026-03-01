@@ -1,4 +1,4 @@
-# 📘 Manual de Usuario - App Reparto (SaaS)
+# 📘 Manual de Usuario - H2APP (SaaS)
 
 Bienvenido a tu nueva aplicación de gestión logística de soda y agua. Este manual está diseñado tanto para los **dueños de las franquicias** como para los **repartidores** que están todo el día en la calle.
 

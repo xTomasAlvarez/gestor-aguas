@@ -5,7 +5,7 @@ import { useAuth }      from "../context/AuthContext";
 import toast            from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, Download } from "lucide-react";
 import useInstallPrompt from "../hooks/useInstallPrompt";
-
+import CanvasWaterTrail from "../components/CanvasWaterTrail";
 const LoginPage = () => {
     const { login } = useAuth();
     const navigate  = useNavigate();
@@ -41,15 +41,16 @@ const LoginPage = () => {
     const labelCls  = "block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1";
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-            <div className="w-full max-w-sm">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 relative z-0">
+            <CanvasWaterTrail />
+            <div className="w-full max-w-sm relative z-10">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">H2APP</h1>
                     <p className="text-sm text-slate-500 mt-2">Inicia sesion para continuar</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-md border border-slate-200 px-8 py-8">
-                    <h2 className="text-lg font-bold text-slate-800 mb-6">Acceder al sistema</h2>
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/60 px-8 py-8 relative z-10">
+                    <h2 className="text-lg font-bold text-slate-800 mb-6 drop-shadow-sm">Acceder al sistema</h2>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {/* Email */}

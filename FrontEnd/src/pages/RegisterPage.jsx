@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { registrarService } from "../services/authService";
 import toast from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, User, KeyRound, Building2 } from "lucide-react";
-
+import CanvasWaterTrail from "../components/CanvasWaterTrail";
 // ── Modos de registro ─────────────────────────────────────────────────────
 const MODOS = {
     empleado: "empleado",  // unirse a empresa existente con inviteCode
@@ -65,8 +65,9 @@ const RegisterPage = () => {
     // ── Pantalla de éxito ─────────────────────────────────────────────────
     if (pendiente) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-                <div className="w-full max-w-sm bg-white rounded-2xl shadow-md border border-slate-200 px-8 py-10 text-center">
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 relative z-0">
+                <CanvasWaterTrail />
+                <div className="w-full max-w-sm bg-white/70 backdrop-blur-sm relative z-10 rounded-2xl shadow-xl border border-white/60 px-8 py-10 text-center">
                     <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
                         <svg className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -97,10 +98,11 @@ const RegisterPage = () => {
     // ── Selección de modo ─────────────────────────────────────────────────
     if (!modo) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-                <div className="w-full max-w-sm">
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 relative z-0">
+                <CanvasWaterTrail />
+                <div className="w-full max-w-sm relative z-10">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
+                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">H2APP</h1>
                         <p className="text-sm text-slate-500 mt-2">¿Cómo queres unirte?</p>
                     </div>
                     <div className="flex flex-col gap-3">
@@ -140,16 +142,17 @@ const RegisterPage = () => {
 
     // ── Formulario ────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-sm">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12 relative z-0">
+            <CanvasWaterTrail />
+            <div className="w-full max-w-sm relative z-10">
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Gestor Aguas</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">H2APP</h1>
                     <p className="text-sm text-slate-500 mt-1">
                         {modo === MODOS.empleado ? "Unirme a una empresa" : "Crear empresa nueva"}
                     </p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-md border border-slate-200 px-8 py-8">
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/60 px-8 py-8 relative z-10">
                     <button onClick={() => setModo(null)}
                         className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-5 transition-colors">
                         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}>

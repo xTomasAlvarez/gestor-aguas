@@ -11,7 +11,7 @@ export const obtenerConfiguracion = async (req, res) => {
         if (!businessId) {
             // Usuario sin empresa devuelve una config vacía por defecto
             return res.status(200).json({
-                nombre: "App Reparto",
+                nombre: "H2APP",
                 logo: null,
                 telefono: null,
                 productos: []
