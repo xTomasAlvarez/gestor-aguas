@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import usePagination from "../hooks/usePagination";
 import { useAuth }         from "../context/AuthContext";
 import { obtenerClientes } from "../services/clienteService";
 import { obtenerVentas }   from "../services/ventasService";
+import Pagination          from "../components/Pagination";
 import toast               from "react-hot-toast";
-import { Send, Users, AlertCircle, Clock, MessageSquare, Zap } from "lucide-react";
+import { Send, Users, AlertCircle, Clock, MessageSquare, Zap, Search } from "lucide-react";
 
 // ── Utilidades ─────────────────────────────────────────────────────────────
 const HACE_UNA_SEMANA = () => {
@@ -25,6 +27,7 @@ const BroadcastPage = () => {
     const [clientes,   setClientes]   = useState([]);
     const [ventas,     setVentas]     = useState([]);
     const [cargando,   setCargando]   = useState(true);
+    const [busqueda,   setBusqueda]   = useState("");
     const [filtro,     setFiltro]     = useState("todos");
     const [mensaje,    setMensaje]    = useState("Hola {nombre}, Mensaje. ");
 
@@ -52,7 +55,17 @@ const BroadcastPage = () => {
 
     // Filtrado
     const clientesFiltrados = useMemo(() => {
-        if (filtro === "deuda") return clientes.filter((c) => (c.saldo_pendiente ?? 0) > 0);
+        let filtrados = clientes;
+
+        // Filtro texto
+        if (busqueda.trim()) {
+            const b = busqueda.toLowerCase();
+            filtrados = filtrados.filter(c => c.nombre.toLowerCase().includes(b));
+        }
+
+        if (filtro === "deuda") {
+            return filtrados.filter((c) => (c.saldo_pendiente ?? 0) > 0);
+        }
         if (filtro === "inactivos") {
             const limite   = HACE_UNA_SEMANA();
             const recientes = new Set(
@@ -60,15 +73,29 @@ const BroadcastPage = () => {
                     .filter((v) => new Date(v.fecha) >= limite && v.items?.length > 0)
                     .map((v)   => String(v.cliente?._id ?? v.cliente))
             );
-            return clientes.filter((c) => !recientes.has(String(c._id)));
+            return filtrados.filter((c) => !recientes.has(String(c._id)));
         }
-        return clientes;
-    }, [clientes, ventas, filtro]);
+        return filtrados;
+    }, [clientes, ventas, filtro, busqueda]);
 
-    // Al cambiar filtro, resetear ráfaga
+    // Paginación con Hook
+    const {
+        paginaActual,
+        setPaginaActual,
+        itemsPorPagina,
+        setItemsPorPagina,
+        resetPagination,
+        items: clientesPaginados,
+        totalPaginas,
+        indiceInicio,
+        indiceFin
+    } = usePagination({ data: clientesFiltrados, initialItemsPerPage: 10 });
+
+    // Al cambiar filtro o busqueda, resetear ráfaga y paginación
     useEffect(() => {
         resetearRafaga();
-    }, [filtro]);
+        resetPagination();
+    }, [filtro, busqueda, itemsPorPagina, resetPagination]);
 
     // Scroll automático al cliente activo en modo ráfaga
     useEffect(() => {
@@ -164,6 +191,20 @@ const BroadcastPage = () => {
                 {/* Filtros + botón ráfaga */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                     <h2 className="text-sm font-bold text-slate-700 mb-3">Filtrar destinatarios</h2>
+
+                    {/* Búsqueda por nombre */}
+                    <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre..."
+                            value={busqueda}
+                            onChange={(e) => setBusqueda(e.target.value)}
+                            disabled={rafagaActiva}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition disabled:opacity-50 text-sm"
+                        />
+                    </div>
+
                     <div className="flex flex-wrap gap-2 mb-4">
                         {FILTROS.map(({ key, label }) => (
                             <button key={key} onClick={() => { setFiltro(key); }}
@@ -200,12 +241,29 @@ const BroadcastPage = () => {
                     )}
                 </div>
 
+                {/* Componente de Paginación */}
+                {clientesFiltrados.length > 0 && !cargando && (
+                    <div className="mb-2">
+                        <Pagination 
+                            paginaActual={paginaActual}
+                            totalPaginas={totalPaginas}
+                            itemsPorPagina={itemsPorPagina}
+                            totalItems={clientesFiltrados.length}
+                            indiceInicio={indiceInicio}
+                            indiceFin={indiceFin}
+                            setPaginaActual={setPaginaActual}
+                            setItemsPorPagina={setItemsPorPagina}
+                            itemLabel="destinatarios"
+                        />
+                    </div>
+                )}
+
                 {/* Lista de clientes */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                         <h2 className="text-sm font-bold text-slate-700">Destinatarios</h2>
                         <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                            {cargando ? "..." : `${clientesFiltrados.length} clientes`}
+                            {cargando ? "..." : `${clientesFiltrados.length} encontrados`}
                         </span>
                     </div>
 
@@ -217,9 +275,11 @@ const BroadcastPage = () => {
                         </div>
                     ) : (
                         <ul className="divide-y divide-slate-100">
-                            {clientesFiltrados.map((c, idx) => {
+                            {clientesPaginados.map((c, idx) => {
                                 const enviado    = enviados.has(c._id);
-                                const esSiguiente = rafagaActiva && !enviado && idx === indexActual;
+                                // The global index is needed to know who is next in rafaga logic.
+                                const globalIdx   = idx + indiceInicio;
+                                const esSiguiente = rafagaActiva && !enviado && globalIdx === indexActual;
                                 const sinTel      = !(c.telefono || "").replace(/\D/g, "");
 
                                 return (
@@ -263,7 +323,7 @@ const BroadcastPage = () => {
                                             </span>
                                         ) : (
                                             <button
-                                                onClick={() => abrirWhatsApp(c, idx)}
+                                                onClick={() => abrirWhatsApp(c, globalIdx)}
                                                 disabled={!mensaje.trim() || sinTel}
                                                 className={`flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm ${
                                                     esSiguiente
