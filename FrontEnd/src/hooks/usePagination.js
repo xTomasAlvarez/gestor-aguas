@@ -5,6 +5,16 @@ const usePagination = ({ data, initialItemsPerPage = 10 }) => {
     const [itemsPorPagina, setItemsPorPagina] = useState(initialItemsPerPage);
 
     const paginatedData = useMemo(() => {
+        if (itemsPorPagina === "Todos") {
+            return {
+                items: data,
+                totalPaginas: 1,
+                totalItems: data.length,
+                indiceInicio: 0,
+                indiceFin: data.length
+            };
+        }
+
         const indiceInicio = (paginaActual - 1) * itemsPorPagina;
         const indiceFin = indiceInicio + itemsPorPagina;
         
