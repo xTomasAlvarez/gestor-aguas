@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import usePagination from "../hooks/usePagination";
 import {
     obtenerClientes, crearCliente, actualizarCliente, eliminarCliente
 } from "../services/clienteService";
@@ -24,10 +25,6 @@ const ClientesPage = () => {
     const [clienteHistorial,setClienteHistorial] = useState(null);
     const [modalInactivos, setModalInactivos] = useState(false);
     const [confirmarDesact,setConfirmarDesact] = useState(null); // cliente a desactivar
-    
-    // Estados de paginación
-    const [paginaActual,   setPaginaActual]   = useState(1);
-    const [itemsPorPagina, setItemsPorPagina] = useState(10);
 
     const cargar = useCallback(async (nombre = "") => {
         try {
@@ -44,10 +41,37 @@ const ClientesPage = () => {
         return () => clearTimeout(t);
     }, [busqueda, cargar]);
 
+    const clientesFiltrados = clientes.filter((c) => {
+        const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
+        const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
+        let matchEst = true;
+        if (filtroEstado === "Con Deuda") {
+            const d = c.deuda || {};
+            matchEst = d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0);
+        } else if (filtroEstado === "Al Día") {
+            const d = c.deuda || {};
+            matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
+        }
+        return matchBusqueda && matchLoc && matchEst;
+    });
+
+    // Paginación con Hook
+    const {
+        paginaActual,
+        setPaginaActual,
+        itemsPorPagina,
+        setItemsPorPagina,
+        resetPagination,
+        items: clientesPaginados,
+        totalPaginas,
+        indiceInicio,
+        indiceFin
+    } = usePagination({ data: clientesFiltrados, initialItemsPerPage: 10 });
+
     // Resetear a página 1 cuando cambien los filtros
     useEffect(() => {
-        setPaginaActual(1);
-    }, [busqueda, filtroLocalidad, filtroEstado, itemsPorPagina]);
+        resetPagination();
+    }, [busqueda, filtroLocalidad, filtroEstado, itemsPorPagina, resetPagination]);
 
     const handleCrear = async (form) => {
         const tid = toast.loading("Guardando cliente...");
@@ -80,6 +104,7 @@ const ClientesPage = () => {
         try {
             await eliminarCliente(cliente._id);
             setClientes((p) => p.filter((c) => c._id !== cliente._id));
+            setConfirmarDesact(null);
             toast.success(`${cliente.nombre} desactivado correctamente.`, { id: tid });
         } catch {
             toast.error("Error al desactivar el cliente.", { id: tid });
@@ -93,26 +118,6 @@ const ClientesPage = () => {
 
     // ── Lógica de Filtrado Local ──
     const localidadesUnicas = ["Todas", ...new Set(clientes.map(c => c.localidad).filter(Boolean))].sort();
-
-    const clientesFiltrados = clientes.filter((c) => {
-        const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
-        const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
-        let matchEst = true;
-        if (filtroEstado === "Con Deuda") {
-            const d = c.deuda || {};
-            matchEst = d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0);
-        } else if (filtroEstado === "Al Día") {
-            const d = c.deuda || {};
-            matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
-        }
-        return matchBusqueda && matchLoc && matchEst;
-    });
-
-    // Paginación matemática
-    const totalPaginas = Math.ceil(clientesFiltrados.length / itemsPorPagina);
-    const indiceInicio = (paginaActual - 1) * itemsPorPagina;
-    const indiceFin = indiceInicio + itemsPorPagina;
-    const clientesPaginados = clientesFiltrados.slice(indiceInicio, indiceFin);
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
