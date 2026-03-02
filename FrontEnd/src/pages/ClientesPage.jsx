@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import usePagination from "../hooks/usePagination";
 import {
     obtenerClientes, crearCliente, actualizarCliente, eliminarCliente
@@ -41,7 +41,7 @@ const ClientesPage = () => {
         return () => clearTimeout(t);
     }, [busqueda, cargar]);
 
-    const clientesFiltrados = clientes.filter((c) => {
+    const clientesFiltrados = useMemo(() => clientes.filter((c) => {
         const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
         const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
         let matchEst = true;
@@ -53,7 +53,7 @@ const ClientesPage = () => {
             matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
         }
         return matchBusqueda && matchLoc && matchEst;
-    });
+    }), [clientes, busqueda, filtroLocalidad, filtroEstado]);
 
     // Paginación con Hook
     const {
@@ -118,6 +118,8 @@ const ClientesPage = () => {
 
     // ── Lógica de Filtrado Local ──
     const localidadesUnicas = ["Todas", ...new Set(clientes.map(c => c.localidad).filter(Boolean))].sort();
+
+
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
