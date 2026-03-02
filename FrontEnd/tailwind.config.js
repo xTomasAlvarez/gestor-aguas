@@ -15,6 +15,29 @@ export default {
         'premium-hover': '0 12px 40px rgba(0, 0, 0, 0.08)',
         'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
       },
+      colors: {
+        corp: {
+          bg: '#F4FFFF',
+          surface: '#D5EBE8',
+          border: '#B6D8D2',
+          text: {
+            sec: '#96C4BB',
+            prim: '#77B0A4'
+          },
+          success: {
+            bg: '#C4EAE2',
+            text: '#408075'
+          },
+          danger: {
+            bg: '#F2D8D8',
+            text: '#A86060'
+          },
+          info: {
+            bg: '#D0E4EC',
+            text: '#4C7B8F'
+          }
+        }
+      },
       keyframes: {
         'fade-in-up': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },

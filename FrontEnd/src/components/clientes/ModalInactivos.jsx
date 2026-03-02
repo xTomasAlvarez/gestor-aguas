@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { obtenerInactivos, toggleEstadoCliente } from "../../services/clienteService";
 import toast from "react-hot-toast";
 import { RotateCcw } from "lucide-react";
+import { TextInput, Button, Text, Group, Avatar, Stack } from "@mantine/core";
 
 // ── Modal de clientes inactivos ───────────────────────────────────────────
 const ModalInactivos = ({ onReactivar }) => {
@@ -41,42 +42,49 @@ const ModalInactivos = ({ onReactivar }) => {
     };
 
     return (
-        <div className="flex flex-col gap-4">
-            <input type="text" placeholder="Buscar inactivo..." value={busqueda}
+        <Stack gap="md">
+            <TextInput 
+                placeholder="Buscar inactivo..." 
+                value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm" />
+                size="md"
+                radius="md"
+            />
 
             {cargando ? (
-                <p className="text-center py-8 text-sm text-slate-400">Cargando...</p>
+                <Text ta="center" py="xl" size="sm" c="dimmed">Cargando...</Text>
             ) : inactivos.length === 0 ? (
-                <p className="text-center py-8 text-sm text-slate-400">No hay clientes inactivos.</p>
+                <Text ta="center" py="xl" size="sm" c="dimmed">No hay clientes inactivos.</Text>
             ) : (
-                <ul className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                <Stack gap="sm" style={{ maxHeight: '320px', overflowY: 'auto' }}>
                     {inactivos.map((c) => (
-                        <li key={c._id} className="py-3 flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-bold text-slate-500">{c.nombre.charAt(0).toUpperCase()}</span>
-                            </div>
+                        <Group key={c._id} wrap="nowrap" align="center" className="py-2 border-b border-slate-50 last:border-0">
+                            <Avatar color="indigo" radius="xl" size="md">
+                                {c.nombre.charAt(0).toUpperCase()}
+                            </Avatar>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-slate-600 truncate">{c.nombre}</p>
+                                <Text size="sm" fw={600} truncate c="dark.8">{c.nombre}</Text>
                                 {(c.direccion || c.localidad) && (
-                                    <p className="text-xs text-slate-400 truncate">
+                                    <Text size="xs" c="dimmed" truncate>
                                         {c.direccion}{c.direccion && c.localidad ? " - " : ""}{c.localidad}
-                                    </p>
+                                    </Text>
                                 )}
                             </div>
-                            <button
+                            <Button
                                 onClick={() => handleReactivar(c)}
                                 disabled={procesando === c._id}
-                                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white transition-colors">
-                                <RotateCcw className="w-3.5 h-3.5" />
+                                leftSection={<RotateCcw className="w-3.5 h-3.5" />}
+                                size="xs"
+                                radius="md"
+                                color="teal"
+                            >
                                 {procesando === c._id ? "..." : "Reactivar"}
-                            </button>
-                        </li>
+                            </Button>
+                        </Group>
                     ))}
-                </ul>
+                </Stack>
             )}
-        </div>
+        </Stack>
     );
 };
 

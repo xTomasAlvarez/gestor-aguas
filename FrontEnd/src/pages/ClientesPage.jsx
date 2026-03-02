@@ -6,14 +6,14 @@ import {
 import Modal        from "../components/Modal";
 import ConfirmModal from "../components/ConfirmModal";
 import toast        from "react-hot-toast";
-import { Archive } from "lucide-react";
+import { Archive }  from "lucide-react";
 
 import FormCliente from "../components/clientes/FormCliente";
 import ClienteCard from "../components/clientes/ClienteCard";
 import ModalInactivos from "../components/clientes/ModalInactivos";
 import ModalHistorialFiados from "../components/clientes/ModalHistorialFiados";
 import Pagination from "../components/Pagination";
-// ── Página principal ──────────────────────────────────────────────────────
+import { TextInput, Button, Tabs, Select, Title, Text, Group, Box, Paper } from "@mantine/core";
 const ClientesPage = () => {
     const [clientes,       setClientes]       = useState([]);
     const [busqueda,       setBusqueda]       = useState("");
@@ -122,45 +122,61 @@ const ClientesPage = () => {
 
 
     return (
-        <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
-            <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+        <Box className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
+            <Group justify="space-between" align="center" className="max-w-6xl mx-auto mb-6">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-slate-800">Clientes</h1>
-                    <p className="text-sm text-slate-500 mt-1">Administracion de clientes activos.</p>
+                    <Title order={1} size="h3" fw={900} c="dark.9">Clientes</Title>
+                    <Text size="sm" c="dimmed" mt={2}>Administracion de clientes activos.</Text>
                 </div>
-                <button onClick={() => setModalInactivos(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm">
-                    <Archive className="w-4 h-4" />
+                <Button 
+                    onClick={() => setModalInactivos(true)} 
+                    variant="white" 
+                    color="gray"
+                    radius="md"
+                    leftSection={<Archive className="w-4 h-4" />}
+                    className="shadow-sm border border-slate-200"
+                >
                     <span className="hidden sm:inline">Ver inactivos</span>
-                </button>
-            </div>
+                </Button>
+            </Group>
 
-            <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Nuevo cliente</h2>
+            <Paper className="max-w-6xl mx-auto mb-6 bg-white" radius="xl" p="lg" withBorder shadow="sm">
+                <Text size="sm" fw={800} tt="uppercase" c="dark.9" mb="md" style={{ letterSpacing: '0.05em' }}>Nuevo cliente</Text>
                 <FormCliente onGuardar={handleCrear} />
-            </div>
+            </Paper>
 
-            <div className="max-w-6xl mx-auto mb-5 flex flex-col sm:flex-row gap-3">
-                <input type="text" placeholder="Buscar por nombre..." value={busqueda}
+            <div className="max-w-6xl mx-auto mb-5 flex flex-col lg:flex-row gap-3 items-end">
+                <TextInput 
+                    placeholder="Buscar por nombre..." 
+                    value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm border-b-2 border-b-blue-500/0 hover:border-b-blue-500/20" />
+                    className="flex-1 w-full" 
+                    size="md"
+                    radius="md"
+                />
                 
-                <select value={filtroLocalidad} onChange={e => setFiltroLocalidad(e.target.value)}
-                    className="sm:w-48 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer font-medium text-sm">
-                    {localidadesUnicas.map(loc => <option key={loc} value={loc}>{loc === "Todas" ? "Todas las localidades" : loc}</option>)}
-                </select>
+                <Select 
+                    value={filtroLocalidad} 
+                    onChange={setFiltroLocalidad}
+                    data={localidadesUnicas.map(loc => ({ value: loc, label: loc === "Todas" ? "Todas las localidades" : loc }))}
+                    className="w-full sm:w-64"
+                    size="md"
+                    radius="md"
+                    comboboxProps={{ shadow: 'md' }}
+                />
 
-                <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-                    className="sm:w-40 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer font-medium text-sm">
-                    <option value="Todos">Todos</option>
-                    <option value="Con Deuda">Con Deuda</option>
-                    <option value="Al Día">Al Día</option>
-                </select>
+                <Tabs value={filtroEstado} onChange={setFiltroEstado} className="w-full sm:w-auto" variant="pills" color="indigo" radius="md">
+                    <Tabs.List className="bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                        <Tabs.Tab value="Todos" className="font-semibold">Todos</Tabs.Tab>
+                        <Tabs.Tab value="Con Deuda" className="font-semibold">Con Deuda</Tabs.Tab>
+                        <Tabs.Tab value="Al Día" className="font-semibold">Al Día</Tabs.Tab>
+                    </Tabs.List>
+                </Tabs>
             </div>
 
-            {cargando && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">Cargando clientes...</p>}
-            {error && !cargando && <div className="max-w-6xl mx-auto bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
-            {!cargando && !error && clientesFiltrados.length === 0 && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">No se encontraron clientes activos con los filtros aplicados.</p>}
+            {cargando && <Text ta="center" py={60} c="dimmed">Cargando clientes...</Text>}
+            {error && !cargando && <Paper bg="red.0" c="red.6" withBorder border="red.2" radius="xl" px="xl" py="lg" mt="md" mx="auto" className="max-w-6xl text-sm">{error}</Paper>}
+            {!cargando && !error && clientesFiltrados.length === 0 && <Text ta="center" py={60} c="dimmed">No se encontraron clientes activos con los filtros aplicados.</Text>}
             {!cargando && !error && clientesFiltrados.length > 0 && (
                 <>
                     <div className="max-w-6xl mx-auto mb-6">
@@ -218,7 +234,7 @@ const ClientesPage = () => {
                 confirmLabel="Desactivar"
                 type="danger"
             />
-        </div>
+        </Box>
     );
 };
 

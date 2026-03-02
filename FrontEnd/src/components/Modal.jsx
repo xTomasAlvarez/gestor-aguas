@@ -1,33 +1,32 @@
-/**
- * Modal genérico reutilizable.
- * Props: isOpen, onClose, title, children, maxWidth (opcional, default "max-w-lg")
- */
-const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }) => {
-    if (!isOpen) return null;
+import { Modal as MantineModal } from '@mantine/core';
 
+/**
+ * Modal genérico reutilizable con Mantine.
+ * Props: isOpen, onClose, title, children, maxWidth (ahora size)
+ */
+const Modal = ({ isOpen, onClose, title, children, maxWidth = "lg" }) => {
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        <MantineModal 
+            opened={isOpen} 
+            onClose={onClose} 
+            title={title} 
+            size={maxWidth}
+            centered
+            radius="xl"
+            overlayProps={{
+                backgroundOpacity: 0.4,
+                blur: 3,
+                color: '#000'
+            }}
+            styles={{
+                header: { padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' },
+                title:  { fontSize: '18px', fontWeight: 700, color: '#0f172a' },
+                body:   { padding: '24px' },
+                content: { backgroundColor: '#fff', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' }
+            }}
         >
-            <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}>
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-slate-400 hover:text-slate-700 transition-colors text-2xl leading-none font-light"
-                        aria-label="Cerrar"
-                    >
-                        &times;
-                    </button>
-                </div>
-                {/* Body */}
-                <div className="px-6 py-5">
-                    {children}
-                </div>
-            </div>
-        </div>
+            {children}
+        </MantineModal>
     );
 };
 

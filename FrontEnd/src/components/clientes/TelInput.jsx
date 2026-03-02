@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Select, TextInput, Group } from "@mantine/core";
 
 const limpiarArea = (v) => v.replace(/\D/g, "").replace(/^0+/, "");
 const limpiarNum  = (v) => v.replace(/\D/g, "").replace(/^15/, "");
@@ -43,20 +44,35 @@ const TelInput = ({ value, onChange }) => {
     }, [value]);
 
     const actualizar = (p, a, n) => onChange(armarTelefono(p, a, n));
-    const sm = "px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-sm";
 
     return (
-        <div className="flex gap-2 items-center">
-            <select value={prefijo} onChange={(e) => { setPrefijo(e.target.value); actualizar(e.target.value, area, numero); }} className={`${sm} w-36 flex-shrink-0`}>
-                {PREFIJOS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
-            <input type="text" inputMode="numeric" maxLength={4} value={area} placeholder="Área"
+        <Group gap="xs" wrap="nowrap" align="center" className="w-full">
+            <Select 
+                data={PREFIJOS} 
+                value={prefijo} 
+                onChange={(val) => { setPrefijo(val); actualizar(val, area, numero); }} 
+                className="w-[150px] flex-shrink-0"
+                comboboxProps={{ shadow: 'sm' }}
+            />
+            <TextInput 
+                type="tel"
+                inputMode="numeric" 
+                maxLength={4} 
+                value={area} 
+                placeholder="Área"
                 onChange={(e) => { const v = limpiarArea(e.target.value); setArea(v); actualizar(prefijo, v, numero); }}
-                className={`${sm} w-20 flex-shrink-0`} />
-            <input type="text" inputMode="numeric" maxLength={10} value={numero} placeholder="Número"
+                className="w-[90px] flex-shrink-0" 
+            />
+            <TextInput 
+                type="tel"
+                inputMode="numeric" 
+                maxLength={10} 
+                value={numero} 
+                placeholder="Número"
                 onChange={(e) => { const v = limpiarNum(e.target.value); setNumero(v); actualizar(prefijo, area, v); }}
-                className={`${sm} flex-1 min-w-0`} />
-        </div>
+                className="flex-1 min-w-0" 
+            />
+        </Group>
     );
 };
 

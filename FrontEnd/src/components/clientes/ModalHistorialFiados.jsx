@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { obtenerVentas } from "../../services/ventasService";
 import { formatFecha, formatPeso } from "../../utils/format";
 import toast from "react-hot-toast";
+import { Text, Stack, Paper, Group, Badge } from "@mantine/core";
 
 // ── Modal Historial de Fiados ─────────────────────────────────────────────
 const ModalHistorialFiados = ({ cliente }) => {
@@ -28,35 +29,35 @@ const ModalHistorialFiados = ({ cliente }) => {
         if (cliente) cargar();
     }, [cliente]);
 
-    if (cargando) return <p className="text-center py-6 text-sm text-slate-400">Cargando historial...</p>;
-    if (ventas.length === 0) return <p className="text-center py-6 text-sm text-slate-400">Este cliente no tiene tickets impagos registrados.</p>;
+    if (cargando) return <Text ta="center" py="xl" size="sm" c="dimmed">Cargando historial...</Text>;
+    if (ventas.length === 0) return <Text ta="center" py="xl" size="sm" c="dimmed">Este cliente no tiene tickets impagos registrados.</Text>;
 
     return (
-        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-1">
+        <Stack gap="sm" style={{ maxHeight: '384px', overflowY: 'auto' }} pr="xs">
             {ventas.map(v => {
                 const abono = v.monto_pagado ?? v.total;
                 const saldo = Math.max(0, v.total - abono);
                 const tieneEnvases = v.metodo_pago === "fiado" && v.items.length > 0;
                 
                 return (
-                    <div key={v._id} className="bg-white border border-red-100 rounded-xl p-4 shadow-sm relative">
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{formatFecha(v.fecha)}</span>
-                            {saldo > 0 && <span className="text-lg font-black text-red-600 leading-none">{formatPeso(saldo)}</span>}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mt-2 transition-all">
-                            {v.items.length === 0 && <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Cobranza (saldo remanente)</span>}
+                    <Paper key={v._id} withBorder radius="md" p="md" shadow="xs" className="border-red-100">
+                        <Group justify="space-between" align="flex-start" mb="xs">
+                            <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>{formatFecha(v.fecha)}</Text>
+                            {saldo > 0 && <Text size="xl" fw={900} c="red.6" lh={1}>{formatPeso(saldo)}</Text>}
+                        </Group>
+                        <Group gap="xs" mt="sm">
+                            {v.items.length === 0 && <Badge color="gray" variant="light" radius="sm">Cobranza (saldo remanente)</Badge>}
                             {v.items.map((item, i) => (
-                                <span key={i} className="text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md">
+                                <Badge key={i} color="indigo" variant="light" radius="sm">
                                     {item.cantidad}x {item.producto}
-                                </span>
+                                </Badge>
                             ))}
-                            {tieneEnvases && <span className="text-[11px] font-bold text-red-500 ml-1 mt-0.5">*(Envases en Mora)</span>}
-                        </div>
-                    </div>
+                            {tieneEnvases && <Text size="11px" fw={700} c="red.5" ml={4} mt={2}>*(Envases en Mora)</Text>}
+                        </Group>
+                    </Paper>
                 );
             })}
-        </div>
+        </Stack>
     );
 };
 

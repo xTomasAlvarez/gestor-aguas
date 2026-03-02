@@ -24,11 +24,11 @@ const ConfirmModal = ({
     if (!isOpen) return null;
 
     const confirmCls = type === "danger"
-        ? "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white"
-        : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white";
+        ? "bg-corp-danger-bg hover:bg-corp-danger-bg/80 focus:ring-corp-danger-text text-corp-danger-text"
+        : "bg-corp-text-prim hover:bg-corp-text-prim/90 focus:ring-corp-text-prim text-white";
 
-    const iconBg = type === "danger" ? "bg-red-100" : "bg-blue-100";
-    const iconColor = type === "danger" ? "text-red-600" : "text-blue-600";
+    const iconBg = type === "danger" ? "bg-corp-danger-bg/50" : "bg-corp-info-bg/50";
+    const iconColor = type === "danger" ? "text-corp-danger-text" : "text-corp-info-text";
 
     return (
         /* Overlay */
@@ -43,7 +43,7 @@ const ConfirmModal = ({
 
             {/* Panel */}
             <div
-                className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+                className="relative w-full max-w-sm bg-corp-bg rounded-2xl shadow-premium border border-corp-border/50 overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Cabecera con ícono */}
@@ -61,9 +61,9 @@ const ConfirmModal = ({
                             </svg>
                         )}
                     </div>
-                    <h2 className="text-base font-bold text-slate-800">{title}</h2>
+                    <h2 className="text-base font-bold text-corp-text-prim">{title}</h2>
                     {message && (
-                        <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">{message}</p>
+                        <p className="text-sm text-corp-text-sec mt-1.5 leading-relaxed">{message}</p>
                     )}
                 </div>
 
@@ -71,7 +71,7 @@ const ConfirmModal = ({
                 <div className="px-6 pb-6 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-corp-border text-corp-text-prim text-sm font-semibold hover:bg-corp-surface transition-colors focus:outline-none focus:ring-2 focus:ring-corp-text-sec"
                     >
                         {cancelLabel}
                     </button>
