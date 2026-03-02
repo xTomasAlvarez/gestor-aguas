@@ -52,13 +52,13 @@ const OnboardingPage = () => {
     const handleAddProd = () => {
         setForm(p => ({
             ...p,
-            productos: [...p.productos, { key: "", label: "", precioDefault: 0 }]
+            productos: [...p.productos, { key: "", label: "", precioDefault: "" }]
         }));
     };
 
     const handleProdChange = (idx, campo, valor) => {
         const nuevos = [...form.productos];
-        nuevos[idx][campo] = campo === "precioDefault" ? Number(valor) : valor;
+        nuevos[idx][campo] = campo === "precioDefault" ? (valor === "" ? "" : Number(valor)) : valor;
         // Auto-generar key a partir del label
         if (campo === "label") {
             nuevos[idx].key = valor.trim().replace(/\s+/g, '_').toLowerCase();
@@ -78,7 +78,7 @@ const OnboardingPage = () => {
         // Validaciones minimas
         if (form.productos.length < 1) return toast.error("Agregá al menos 1 producto para arrancar.");
         for (let prod of form.productos) {
-            if (!prod.label || prod.precioDefault <= 0) {
+            if (!prod.label || prod.precioDefault === "" || prod.precioDefault <= 0) {
                 return toast.error("Asegurate de que todos los productos tengan nombre y precio mayor a 0.");
             }
         }
