@@ -7,7 +7,8 @@ const Pagination = ({
     indiceFin,
     setPaginaActual,
     setItemsPorPagina,
-    itemLabel = "resultados"
+    itemLabel = "resultados",
+    options = [5, 10, 25]
 }) => {
     return (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 sm:px-6 rounded-2xl shadow-sm border border-slate-200">
@@ -15,12 +16,15 @@ const Pagination = ({
                 <span className="text-sm font-medium text-slate-500">Mostrar</span>
                 <select 
                     value={itemsPorPagina} 
-                    onChange={(e) => setItemsPorPagina(Number(e.target.value))}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        setItemsPorPagina(val === "Todos" ? "Todos" : Number(val));
+                    }}
                     className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
+                    {options.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                    ))}
                 </select>
                 <span className="text-sm font-medium text-slate-500">por página</span>
             </div>

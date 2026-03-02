@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import usePagination from "../hooks/usePagination";
+import Pagination from "../components/Pagination";
 import { obtenerVentas }   from "../services/ventasService";
 import { obtenerGastos }   from "../services/gastosService";
 import { obtenerLlenados } from "../services/llenadoService";
@@ -27,16 +29,18 @@ const MetodoBadge = ({ metodo }) => {
 };
 
 // ── SECCIÓN 1: Tabla de ventas ─────────────────────────────────────────────
-const TablaVentas = ({ ventas }) => {
-    if (ventas.length === 0) return (
+const TablaVentas = ({ ventas, ventasTotales }) => {
+    const listaParaTotal = ventasTotales || ventas;
+
+    if (listaParaTotal.length === 0) return (
         <p className="text-center py-8 text-sm text-slate-400">Sin ventas para este dia.</p>
     );
 
-    const totalDia  = ventas.reduce((acc, v) => acc + v.total, 0);
-    const totalAbonoEfvo = ventas
+    const totalDia  = listaParaTotal.reduce((acc, v) => acc + v.total, 0);
+    const totalAbonoEfvo = listaParaTotal
         .filter(v => v.metodo_pago === "efectivo")
         .reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const totalSaldo = ventas.reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? v.total)), 0);
+    const totalSaldo = listaParaTotal.reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? v.total)), 0);
 
     return (
         <div className="overflow-x-auto">
@@ -104,16 +108,16 @@ const TablaVentas = ({ ventas }) => {
                     <tr className="bg-slate-100 font-bold text-slate-800 text-sm">
                         <td className="px-4 py-3 rounded-bl-xl">
                             TOTAL DIA
-                            <span className="ml-2 text-xs font-normal text-slate-500">({ventas.length} ventas)</span>
+                            <span className="ml-2 text-xs font-normal text-slate-500">({listaParaTotal.length} ventas)</span>
                         </td>
                         <td className="text-center px-2 py-3">
-                            {ventas.reduce((acc, v) => acc + cantProd(v.items, "Bidon 20L"), 0) || "—"}
+                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Bidon 20L"), 0) || "—"}
                         </td>
                         <td className="text-center px-2 py-3">
-                            {ventas.reduce((acc, v) => acc + cantProd(v.items, "Bidon 12L"), 0) || "—"}
+                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Bidon 12L"), 0) || "—"}
                         </td>
                         <td className="text-center px-2 py-3">
-                            {ventas.reduce((acc, v) => acc + cantProd(v.items, "Soda"), 0) || "—"}
+                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Soda"), 0) || "—"}
                         </td>
                         <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
                         <td className="text-right px-3 py-3 text-emerald-700">
@@ -322,6 +326,24 @@ const PlanillaPage = () => {
     const gastosDia   = useMemo(() => gastos.filter((g)   => dayKey(g.fecha)   === fecha), [gastos,   fecha]);
     const llenadosDia = useMemo(() => llenados.filter((l) => dayKey(l.fecha)   === fecha), [llenados, fecha]);
 
+    // Paginación con Hook
+    const {
+        paginaActual,
+        setPaginaActual,
+        itemsPorPagina,
+        setItemsPorPagina,
+        resetPagination,
+        items: ventasPaginadas,
+        totalPaginas,
+        indiceInicio,
+        indiceFin
+    } = usePagination({ data: ventasDia, initialItemsPerPage: 10 });
+
+    // Resetear página al cambiar la fecha
+    useEffect(() => {
+        resetPagination();
+    }, [fecha, resetPagination, itemsPorPagina]);
+
     const fechaLegible = new Date(fecha + "T12:00:00").toLocaleDateString("es-AR", {
         weekday: "long", day: "2-digit", month: "long", year: "numeric",
     });
@@ -374,14 +396,31 @@ const PlanillaPage = () => {
 
             {!cargando && !error && (
                 <div className="max-w-6xl mx-auto flex flex-col gap-6">
-                    {/* ── SECCIÓN 1: Tabla de ventas ───────────────────── */}
+                    {/* ── SECCIÓN 1: Paginacion y Tabla de ventas ───────────────────── */}
+                    {ventasDia.length > 0 && (
+                        <div className="mb-2">
+                            <Pagination 
+                                paginaActual={paginaActual}
+                                totalPaginas={totalPaginas}
+                                itemsPorPagina={itemsPorPagina}
+                                totalItems={ventasDia.length}
+                                indiceInicio={indiceInicio}
+                                indiceFin={indiceFin}
+                                setPaginaActual={setPaginaActual}
+                                setItemsPorPagina={setItemsPorPagina}
+                                itemLabel="ventas"
+                                options={[5, 10, "Todos"]}
+                            />
+                        </div>
+                    )}
+                    
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100">
                             <h2 className="text-base font-bold text-slate-800">Ventas del dia</h2>
                             <p className="text-xs text-slate-400 mt-0.5">Detalle de todas las entregas realizadas</p>
                         </div>
                         <div className="p-2 sm:p-4">
-                            <TablaVentas ventas={ventasDia} />
+                            <TablaVentas ventas={ventasPaginadas} ventasTotales={ventasDia} />
                         </div>
                     </div>
 
