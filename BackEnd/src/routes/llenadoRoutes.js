@@ -7,17 +7,21 @@ import {
     eliminarLlenado,
 } from "../controllers/llenadoController.js";
 import { proteger } from "../middleware/authMiddleware.js";
+import {
+    validarCrearLlenado,
+    validarActualizarLlenado
+} from "../middleware/validators/llenadoValidator.js";
 
 const router = Router();
 router.use(proteger);
 
 router.route("/")
     .get(obtenerLlenados)
-    .post(crearLlenado);
+    .post(validarCrearLlenado, crearLlenado);
 
 router.route("/:id")
     .get(obtenerLlenadoPorId)
-    .put(actualizarLlenado)
+    .put(validarActualizarLlenado, actualizarLlenado)
     .delete(eliminarLlenado);
 
 export default router;
