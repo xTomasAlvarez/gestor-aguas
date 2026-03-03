@@ -1,62 +1,53 @@
-import Gasto from "../models/Gastos.js";
+import * as GastosService from "../services/gastosService.js";
 
 const biz = (req) => req.usuario.businessId;
 
 // ── POST /api/gastos ───────────────────────────────────────────────────────
 export const crearGasto = async (req, res) => {
     try {
-        const payload = { ...req.body, businessId: biz(req) };
-        if (payload.fecha) payload.fecha = new Date(payload.fecha);
-        const nuevoGasto = await Gasto.create(payload);
-        res.status(201).json(nuevoGasto);
+        const resultado = await GastosService.crearGasto(req.body, biz(req));
+        res.status(201).json(resultado);
     } catch (error) {
-        res.status(500).json({ message: "Error al crear el gasto.", error: error.message });
+        res.status(error.status || 500).json({ message: error.message });
     }
 };
 
 // ── GET /api/gastos ────────────────────────────────────────────────────────
 export const obtenerGastos = async (req, res) => {
     try {
-        const gastos = await Gasto.find({ businessId: biz(req) }).sort({ fecha: -1 });
-        res.status(200).json(gastos);
+        const resultado = await GastosService.obtenerGastos(biz(req));
+        res.status(200).json(resultado);
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener los gastos.", error: error.message });
+        res.status(error.status || 500).json({ message: error.message });
     }
 };
 
 // ── GET /api/gastos/:id ────────────────────────────────────────────────────
 export const obtenerGastoPorId = async (req, res) => {
     try {
-        const gasto = await Gasto.findOne({ _id: req.params.id, businessId: biz(req) });
-        if (!gasto) return res.status(404).json({ message: "Gasto no encontrado." });
-        res.status(200).json(gasto);
+        const resultado = await GastosService.obtenerGastoPorId(req.params.id, biz(req));
+        res.status(200).json(resultado);
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener el gasto.", error: error.message });
+        res.status(error.status || 500).json({ message: error.message });
     }
 };
 
 // ── PUT /api/gastos/:id ────────────────────────────────────────────────────
 export const actualizarGasto = async (req, res) => {
     try {
-        const gastoActualizado = await Gasto.findOneAndUpdate(
-            { _id: req.params.id, businessId: biz(req) },
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!gastoActualizado) return res.status(404).json({ message: "Gasto no encontrado." });
-        res.status(200).json(gastoActualizado);
+        const resultado = await GastosService.actualizarGasto(req.params.id, req.body, biz(req));
+        res.status(200).json(resultado);
     } catch (error) {
-        res.status(500).json({ message: "Error al actualizar el gasto.", error: error.message });
+        res.status(error.status || 500).json({ message: error.message });
     }
 };
 
 // ── DELETE /api/gastos/:id ─────────────────────────────────────────────────
 export const eliminarGasto = async (req, res) => {
     try {
-        const gastoEliminado = await Gasto.findOneAndDelete({ _id: req.params.id, businessId: biz(req) });
-        if (!gastoEliminado) return res.status(404).json({ message: "Gasto no encontrado." });
-        res.status(200).json({ message: "Gasto eliminado correctamente." });
+        const resultado = await GastosService.eliminarGasto(req.params.id, biz(req));
+        res.status(200).json(resultado);
     } catch (error) {
-        res.status(500).json({ message: "Error al eliminar el gasto.", error: error.message });
+        res.status(error.status || 500).json({ message: error.message });
     }
 };
