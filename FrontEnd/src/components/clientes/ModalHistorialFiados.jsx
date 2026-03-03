@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { obtenerVentas } from "../../services/ventasService";
-import { formatFecha, formatPeso } from "../../utils/format";
 import { Badge, Paper, Stack, Text, Group, Divider } from "@mantine/core";
+import { formatFecha, formatPeso } from "../../utils/format";
 import toast from "react-hot-toast";
 
 const ModalHistorialFiados = ({ cliente }) => {
@@ -33,72 +33,63 @@ const ModalHistorialFiados = ({ cliente }) => {
     if (ventas.length === 0) return <Text ta="center" py="xl" size="sm" c="dimmed">Este cliente no tiene tickets impagos registrados.</Text>;
 
     return (
-        <Stack gap="sm" style={{ maxHeight: '24rem', overflowY: 'auto' }}>
+        <Stack gap="sm" style={{ maxHeight: '32rem', overflowY: 'auto' }}>
             {ventas.map(v => {
-                const abono = v.monto_pagado || 0;
-                const saldo = Math.max(0, v.total - abono);
-                const descEstado = v.estado || (saldo > 0 ? "pendiente" : "saldado");
-                
-                const badgeColor = descEstado === "saldado" ? "teal" : descEstado === "pago_parcial" ? "orange" : "red";
-                
-                const dev = v.envases_devueltos || {};
-                const prestados = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
-                v.items?.forEach(item => {
-                    if (item.producto === "Bidon 20L") prestados.bidones_20L += item.cantidad;
-                    if (item.producto === "Bidon 12L") prestados.bidones_12L += item.cantidad;
-                    if (item.producto === "Soda")      prestados.sodas       += item.cantidad;
-                });
+                if (!v) return null;
+                const estado = String(v.estado || "pendiente").toLowerCase();
+                let colorBadge = "red";
+                if (estado === "saldado") colorBadge = "teal";
+                else if (estado === "pago_parcial") colorBadge = "yellow";
 
-                const falto_20L = Math.max(0, prestados.bidones_20L - (dev.bidones_20L || 0));
-                const falto_12L = Math.max(0, prestados.bidones_12L - (dev.bidones_12L || 0));
-                const faltosoda = Math.max(0, prestados.sodas - (dev.sodas || 0));
-                const tieneEnvasesDeuda = falto_20L > 0 || falto_12L > 0 || faltosoda > 0;
+                const envasesArray = v.envases || v.items || [];
+                const devueltosObj = v.envasesDevueltos || v.envases_devueltos || {};
 
                 return (
-                    <Paper key={v._id} withBorder p="md" radius="md" bg="slate.50">
-                        <Group justify="space-between" mb="xs">
-                            <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1}>{formatFecha(v.fecha)}</Text>
-                            <Badge color={badgeColor} variant="light">
-                                {descEstado.replace("_", " ").toUpperCase()}
+                    <Paper key={String(v._id || Math.random())} withBorder p="md" radius="md" bg="slate.50" mb="sm">
+                        <Group justify="space-between" mb="sm">
+                            <Text size="sm" fw={700} c="dimmed">{v.fecha ? formatFecha(v.fecha) : 'N/A'}</Text>
+                            <Badge color={colorBadge} variant="light">
+                                {estado.replace("_", " ").toUpperCase()}
                             </Badge>
                         </Group>
-
-                        <Group justify="space-between" align="flex-end" mb="xs">
-                            <Stack gap={0}>
-                                <Text size="xl" fw={900} c={saldo > 0 ? "red.6" : "teal.7"} lh={1}>
-                                    {formatPeso(saldo)}
-                                </Text>
-                                <Text size="xs" c="dimmed" fw={500}>Saldo Monetario</Text>
-                            </Stack>
-                            {abono > 0 && (
-                                <Text size="xs" c="teal.7" fw={700}>Pagado: {formatPeso(abono)}</Text>
-                            )}
-                        </Group>
                         
-                        {(v.items.length > 0 || tieneEnvasesDeuda) && (
-                            <>
-                                <Divider my="xs" color="slate.200" />
-                                <Group gap="xs">
-                                    {v.items.length === 0 && <Badge variant="dot" color="gray">Cobranza Simple</Badge>}
-                                    {v.items.map((item, i) => (
-                                        <Badge key={i} variant="outline" color="blue">
-                                            {item.cantidad}x {item.producto}
-                                        </Badge>
-                                    ))}
-                                </Group>
-                            </>
-                        )}
+                        <Divider my="sm" color="slate.200" />
+                        
+                        <Group justify="space-between" align="center" mb="xs">
+                            <Stack gap={0}>
+                                <Text size="md" fw={700} c="slate.800">
+                                    Monto Total: {formatPeso(Number(v.total || 0))}
+                                </Text>
+                            </Stack>
+                            {(Number(v.monto_pagado || 0) > 0) ? (
+                                <Text size="sm" fw={600} c="dimmed">
+                                    Abonado: {formatPeso(Number(v.monto_pagado))}
+                                </Text>
+                            ) : null}
+                        </Group>
 
-                        {tieneEnvasesDeuda && (
-                            <Paper mt="sm" bg="red.50" px="sm" py="xs" radius="sm">
-                                <Text size="xs" c="red.7" fw={700} mb={2}>Envases Pendientes de Retorno:</Text>
+                        {/* Envases Prestados */}
+                        {(Array.isArray(envasesArray) && envasesArray.length > 0) ? (
+                            <Group gap="xs" mt="sm">
+                                {envasesArray.map((env, i) => (
+                                    <Badge key={`env-${i}`} variant="outline" color="blue" size="sm">
+                                        {`${Number(env?.cantidad || 0)}x ${String(env?.producto || '')}`}
+                                    </Badge>
+                                ))}
+                            </Group>
+                        ) : null}
+
+                        {/* Envases Devueltos */}
+                        {(devueltosObj?.bidones_20L > 0 || devueltosObj?.bidones_12L > 0 || devueltosObj?.sodas > 0) ? (
+                            <Paper mt="sm" p="xs" bg="teal.50" radius="sm">
+                                <Text size="xs" fw={700} c="teal.8" mb={4}>Envases Devueltos (Liquidados):</Text>
                                 <Group gap="xs">
-                                    {falto_20L > 0 && <Badge size="xs" color="red" variant="filled">{falto_20L}x Bidón 20L</Badge>}
-                                    {falto_12L > 0 && <Badge size="xs" color="red" variant="filled">{falto_12L}x Bidón 12L</Badge>}
-                                    {faltosoda > 0 && <Badge size="xs" color="red" variant="filled">{faltosoda}x Soda</Badge>}
+                                    {devueltosObj?.bidones_20L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.bidones_20L)}x Bidón 20L`}</Text> : null}
+                                    {devueltosObj?.bidones_12L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.bidones_12L)}x Bidón 12L`}</Text> : null}
+                                    {devueltosObj?.sodas > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.sodas)}x Soda`}</Text> : null}
                                 </Group>
                             </Paper>
-                        )}
+                        ) : null}
                     </Paper>
                 );
             })}
