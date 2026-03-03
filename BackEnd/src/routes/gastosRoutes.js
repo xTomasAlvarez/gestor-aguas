@@ -11,6 +11,7 @@ import {
     validarCrearGasto,
     validarActualizarGasto
 } from "../middleware/validators/gastosValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger);
@@ -20,8 +21,8 @@ router.route("/")
     .post(validarCrearGasto, crearGasto);
 
 router.route("/:id")
-    .get(obtenerGastoPorId)
-    .put(validarActualizarGasto, actualizarGasto)
-    .delete(eliminarGasto);
+    .get(validateObjectId, obtenerGastoPorId)
+    .put(validateObjectId, validarActualizarGasto, actualizarGasto)
+    .delete(validateObjectId, eliminarGasto);
 
 export default router;

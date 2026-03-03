@@ -18,9 +18,6 @@ export const proteger = async (req, res, next) => {
         if (!req.usuario)
             return res.status(401).json({ message: "Usuario no encontrado." });
 
-        // ── Log de seguridad (temporal, para diagnóstico multi-tenant) ────────
-        console.log(`[AUTH] Usuario: ${req.usuario.email} | Rol: ${req.usuario.rol} | Empresa: ${req.usuario.businessId ?? "SIN EMPRESA"} | ${req.method} ${req.originalUrl}`);
-
         next();
     } catch {
         res.status(401).json({ message: "Token invalido o expirado." });

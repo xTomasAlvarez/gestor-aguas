@@ -55,6 +55,15 @@ const corsOptions = {
 // Debe ser el PRIMER middleware en inyectarse para asegurar resolución de cabeceras
 app.use(cors(corsOptions));
 
+// Forzar HTTPS en producción (Render no redirige automáticamente)
+if (process.env.NODE_ENV === "production") {
+    app.use((req, res, next) => {
+        if (req.headers["x-forwarded-proto"] !== "https") {
+            return res.redirect(301, `https://${req.headers.host}${req.url}`);
+        }
+        next();
+    });
+}
 
 // ── Middlewares globales de Ciberseguridad ──────────────────────────────────
 app.use(helmet()); // Añade cabeceras HTTP seguras (anti-XSS, anti-Clickjacking)

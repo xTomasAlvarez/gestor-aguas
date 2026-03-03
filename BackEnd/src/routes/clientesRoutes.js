@@ -13,6 +13,7 @@ import {
     validarCrearCliente,
     validarActualizarCliente
 } from "../middleware/validators/clientesValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger); // todas las rutas requieren JWT
@@ -23,11 +24,11 @@ router.route("/")
     .get(obtenerClientes)
     .post(validarCrearCliente, crearCliente);
 
-router.patch("/:id/estado", toggleEstado);
+router.patch("/:id/estado", validateObjectId, toggleEstado);
 
 router.route("/:id")
-    .get(obtenerClientePorId)
-    .put(validarActualizarCliente, actualizarCliente)
-    .delete(eliminarCliente);
+    .get(validateObjectId, obtenerClientePorId)
+    .put(validateObjectId, validarActualizarCliente, actualizarCliente)
+    .delete(validateObjectId, eliminarCliente);
 
 export default router;
