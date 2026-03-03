@@ -29,13 +29,7 @@ export const obtenerConfiguracion = async (businessId) => {
 };
 
 // ── actualizarConfiguracion ────────────────────────────────────────────────
-export const actualizarConfiguracion = async (body, businessId, rol) => {
-    if (rol !== "admin" && rol !== "superadmin") {
-        const err = new Error("No tienes permisos de administrador.");
-        err.status = 403;
-        throw err;
-    }
-
+export const actualizarConfiguracion = async (body, businessId) => {
     if (!businessId) {
         const err = new Error("No tienes una empresa asignada.");
         err.status = 400;

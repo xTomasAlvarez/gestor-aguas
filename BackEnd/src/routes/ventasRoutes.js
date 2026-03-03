@@ -13,6 +13,7 @@ import {
     validarRegistrarCobranza,
     validarActualizarVenta
 } from "../middleware/validators/ventasValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger);
@@ -24,8 +25,8 @@ router.route("/")
 router.post("/cobrar", validarRegistrarCobranza, registrarCobranza);
 
 router.route("/:id")
-    .get(obtenerVentaPorId)
-    .put(validarActualizarVenta, actualizarVenta)
-    .delete(eliminarVenta);
+    .get(validateObjectId, obtenerVentaPorId)
+    .put(validateObjectId, validarActualizarVenta, actualizarVenta)
+    .delete(validateObjectId, eliminarVenta);
 
 export default router;

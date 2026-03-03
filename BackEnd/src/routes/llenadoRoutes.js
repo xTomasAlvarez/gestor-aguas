@@ -11,6 +11,7 @@ import {
     validarCrearLlenado,
     validarActualizarLlenado
 } from "../middleware/validators/llenadoValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger);
@@ -20,8 +21,8 @@ router.route("/")
     .post(validarCrearLlenado, crearLlenado);
 
 router.route("/:id")
-    .get(obtenerLlenadoPorId)
-    .put(validarActualizarLlenado, actualizarLlenado)
-    .delete(eliminarLlenado);
+    .get(validateObjectId, obtenerLlenadoPorId)
+    .put(validateObjectId, validarActualizarLlenado, actualizarLlenado)
+    .delete(validateObjectId, eliminarLlenado);
 
 export default router;
