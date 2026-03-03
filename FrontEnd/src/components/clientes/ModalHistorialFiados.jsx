@@ -41,13 +41,26 @@ const ModalHistorialFiados = ({ cliente }) => {
                 if (estado === "saldado") colorBadge = "teal";
                 else if (estado === "pago_parcial") colorBadge = "yellow";
 
-                const envasesArray = v.envases || v.items || [];
+                const envasesArray = Array.isArray(v.envases) ? v.envases : (Array.isArray(v.items) ? v.items : []);
                 const devueltosObj = v.envasesDevueltos || v.envases_devueltos || {};
 
+                // Strictly map properties to primitive Numbers
+                const ret20L = Number(devueltosObj.bidon20L || devueltosObj.bidones_20L || 0);
+                const ret12L = Number(devueltosObj.bidon12L || devueltosObj.bidones_12L || 0);
+                const retSoda = Number(devueltosObj.soda || devueltosObj.sodas || 0);
+                const showDevueltos = ret20L > 0 || ret12L > 0 || retSoda > 0;
+
+                const montoTotal = Number(v.total || 0);
+                const montoAbonado = Number(v.monto_pagado || 0);
+                const hasAbono = montoAbonado > 0;
+                const hasPrestados = envasesArray.length > 0;
+
                 return (
-                    <Paper key={String(v._id || Math.random())} withBorder p="md" radius="md" bg="slate.50" mb="sm">
+                    <Paper key={String(v._id || Math.random())} withBorder p="md" radius="md" className="bg-slate-50" mb="sm">
                         <Group justify="space-between" mb="sm">
-                            <Text size="sm" fw={700} c="dimmed">{v.fecha ? formatFecha(v.fecha) : 'N/A'}</Text>
+                            <Text size="sm" fw={700} c="dimmed">
+                                {v.fecha ? formatFecha(String(v.fecha)) : 'N/A'}
+                            </Text>
                             <Badge color={colorBadge} variant="light">
                                 {estado.replace("_", " ").toUpperCase()}
                             </Badge>
@@ -57,19 +70,19 @@ const ModalHistorialFiados = ({ cliente }) => {
                         
                         <Group justify="space-between" align="center" mb="xs">
                             <Stack gap={0}>
-                                <Text size="md" fw={700} c="slate.800">
-                                    Monto Total: {formatPeso(Number(v.total || 0))}
+                                <Text size="md" fw={700} className="text-slate-800">
+                                    {`Monto Total: ${formatPeso(montoTotal)}`}
                                 </Text>
                             </Stack>
-                            {(Number(v.monto_pagado || 0) > 0) ? (
+                            {hasAbono ? (
                                 <Text size="sm" fw={600} c="dimmed">
-                                    Abonado: {formatPeso(Number(v.monto_pagado))}
+                                    {`Abonado: ${formatPeso(montoAbonado)}`}
                                 </Text>
                             ) : null}
                         </Group>
 
                         {/* Envases Prestados */}
-                        {(Array.isArray(envasesArray) && envasesArray.length > 0) ? (
+                        {hasPrestados ? (
                             <Group gap="xs" mt="sm">
                                 {envasesArray.map((env, i) => (
                                     <Badge key={`env-${i}`} variant="outline" color="blue" size="sm">
@@ -80,13 +93,13 @@ const ModalHistorialFiados = ({ cliente }) => {
                         ) : null}
 
                         {/* Envases Devueltos */}
-                        {(devueltosObj?.bidones_20L > 0 || devueltosObj?.bidones_12L > 0 || devueltosObj?.sodas > 0) ? (
-                            <Paper mt="sm" p="xs" bg="teal.50" radius="sm">
+                        {showDevueltos ? (
+                            <Paper mt="sm" p="xs" className="bg-teal-50" radius="sm">
                                 <Text size="xs" fw={700} c="teal.8" mb={4}>Envases Devueltos (Liquidados):</Text>
                                 <Group gap="xs">
-                                    {devueltosObj?.bidones_20L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.bidones_20L)}x Bidón 20L`}</Text> : null}
-                                    {devueltosObj?.bidones_12L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.bidones_12L)}x Bidón 12L`}</Text> : null}
-                                    {devueltosObj?.sodas > 0 ? <Text size="xs" fw={600} c="teal.7">{`${Number(devueltosObj.sodas)}x Soda`}</Text> : null}
+                                    {ret20L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${ret20L}x Bidón 20L`}</Text> : null}
+                                    {ret12L > 0 ? <Text size="xs" fw={600} c="teal.7">{`${ret12L}x Bidón 12L`}</Text> : null}
+                                    {retSoda > 0 ? <Text size="xs" fw={600} c="teal.7">{`${retSoda}x Soda`}</Text> : null}
                                 </Group>
                             </Paper>
                         ) : null}
