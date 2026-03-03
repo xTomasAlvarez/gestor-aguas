@@ -1,5 +1,6 @@
 import { useState } from "react";
 import TelInput from "./TelInput";
+import CounterInput from "../CounterInput";
 import { btnPrimary, btnSecondary } from "../../styles/cls";
 
 const FORM_VACIO = { nombre: "", direccion: "", localidad: "", telefono: "", dispensersAsignados: 0 };
@@ -30,17 +31,13 @@ const FormCliente = ({ inicial = FORM_VACIO, onGuardar, onCancelar, esEdicion = 
                 <input name="direccion" value={form.direccion} onChange={handleChange} placeholder="Direccion" className={inputCls} />
                 <input name="localidad" value={form.localidad} onChange={handleChange} placeholder="Localidad" className={inputCls} />
             </div>
-            <div className="flex gap-4 items-center bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200">
-                <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-700">Equipos en Cliente</p>
-                    <p className="text-[10px] text-slate-500 leading-tight">Dispensers prestados para su uso (Afecta stock en calle)</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button type="button" title="Retirar Equipo" aria-label="Retirar Equipo" onClick={() => setForm(p => ({ ...p, dispensersAsignados: Math.max(0, (p.dispensersAsignados || 0) - 1) }))} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold text-lg hover:bg-slate-300 transition touch-manipulation">-</button>
-                    <span className="w-6 flex justify-center text-base font-bold text-slate-800 tabular-nums">{form.dispensersAsignados || 0}</span>
-                    <button type="button" title="Asignar Equipo" aria-label="Asignar Equipo" onClick={() => setForm(p => ({ ...p, dispensersAsignados: (p.dispensersAsignados || 0) + 1 }))} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 font-bold text-lg hover:bg-slate-300 transition touch-manipulation">+</button>
-                </div>
-            </div>
+            <CounterInput 
+                label="Equipos en Cliente"
+                description="Dispensers prestados para su uso (Afecta stock en calle)"
+                value={form.dispensersAsignados || 0}
+                onChange={(val) => setForm((p) => ({ ...p, dispensersAsignados: val }))}
+                min={0}
+            />
             <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Telefono</p>
                 <TelInput value={form.telefono} onChange={handleTelChange} />

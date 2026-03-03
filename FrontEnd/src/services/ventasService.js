@@ -8,3 +8,9 @@ export const obtenerVentas   = crud.obtener;
 export const crearVenta      = crud.crear;
 export const actualizarVenta = crud.actualizar;
 export const anularVenta     = crud.eliminar;
+
+import api from "./api.js";
+export const registrarCobranza = async (data) => {
+    const res = await api.post(`${BASE}/cobrar`, data);
+    return res.data;
+};
