@@ -5,6 +5,7 @@ import {
     obtenerVentaPorId,
     actualizarVenta,
     eliminarVenta,
+    registrarCobranza
 } from "../controllers/ventasController.js";
 import { proteger } from "../middleware/authMiddleware.js";
 
@@ -14,6 +15,8 @@ router.use(proteger);
 router.route("/")
     .get(obtenerVentas)
     .post(crearVenta);
+
+router.post("/cobrar", registrarCobranza);
 
 router.route("/:id")
     .get(obtenerVentaPorId)

@@ -37,7 +37,7 @@ const VentasPage = () => {
 
     const { items: ventas,   cargando: cargV, error: errorV, cargar: recargarVentas } =
         useListaCrud(() => obtenerVentas().then((r) => r.data));
-    const { items: clientes, cargando: cargC, error: errorC } =
+    const { items: clientes, cargando: cargC, error: errorC, cargar: recargarClientes } =
         useListaCrud(() => obtenerClientes().then((r) => r.data));
 
     const [filtroTiempo,    setFiltroTiempo]    = useState("hoy");
@@ -54,12 +54,17 @@ const VentasPage = () => {
         const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n;
     });
 
-    const handleCrear  = async (payload) => { await crearVenta(payload); await recargarVentas(); setModalCrear(false); };
-    const handleEditar = async (payload) => { await actualizarVenta(editando._id, payload); await recargarVentas(); setEditando(null); };
+    const recargarTodo = async () => {
+        console.log("3. Repintando UI: recargando lista de clientes y ventas...");
+        await Promise.all([recargarVentas(), recargarClientes()]);
+    };
+
+    const handleCrear  = async (payload) => { await crearVenta(payload); await recargarTodo(); setModalCrear(false); };
+    const handleEditar = async (payload) => { await actualizarVenta(editando._id, payload); await recargarTodo(); setEditando(null); };
     const handleAnular = async () => {
         const { id } = confirmarAnular;
         await anularVenta(id);
-        await recargarVentas();
+        await recargarTodo();
         toast.success("Venta anulada. La deuda fue revertida.");
     };
 
@@ -119,12 +124,12 @@ const VentasPage = () => {
             </div>
 
             <Modal isOpen={modalCrear} onClose={() => setModalCrear(false)} title="Nueva venta" maxWidth="max-w-xl">
-                <FormVenta clientes={clientes} productosBase={productosBase} onGuardar={handleCrear} onCancelar={() => setModalCrear(false)} />
+                <FormVenta clientes={clientes} productosBase={productosBase} onGuardar={handleCrear} onCancelar={() => setModalCrear(false)} onRefresh={recargarTodo} />
             </Modal>
             <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar venta" maxWidth="max-w-xl">
                 {editando && (
                     <FormVenta clientes={clientes} productosBase={productosBase} inicial={ventaToForm(editando, productosBase)}
-                        onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion />
+                        onGuardar={handleEditar} onCancelar={() => setEditando(null)} esEdicion onRefresh={recargarTodo} />
                 )}
             </Modal>
 

@@ -37,9 +37,13 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
     );
 
     const totalDia  = listaParaTotal.reduce((acc, v) => acc + v.total, 0);
-    const totalAbonoEfvo = listaParaTotal
+    const totalEfectivo = listaParaTotal
         .filter(v => v.metodo_pago === "efectivo")
         .reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const totalTransferencia = listaParaTotal
+        .filter(v => v.metodo_pago === "transferencia")
+        .reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    const totalGeneral = totalEfectivo + totalTransferencia;
     const totalSaldo = listaParaTotal.reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? v.total)), 0);
 
     return (
@@ -121,8 +125,11 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                         </td>
                         <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
                         <td className="text-right px-3 py-3 text-emerald-700">
-                            {formatPeso(totalAbonoEfvo)}
-                            <span className="block text-[10px] text-slate-500 font-normal">solo efvo</span>
+                            {formatPeso(totalGeneral)}
+                            <div className="mt-1 flex flex-col items-end gap-0.5">
+                                <span className="block text-[10px] text-slate-500 font-normal">💵 Efvo: {formatPeso(totalEfectivo)}</span>
+                                <span className="block text-[10px] text-slate-500 font-normal">📱 Transf: {formatPeso(totalTransferencia)}</span>
+                            </div>
                         </td>
                         <td className={`text-right px-3 py-3 ${totalSaldo > 0 ? "text-red-600" : "text-slate-300"}`}>
                             {totalSaldo > 0 ? formatPeso(totalSaldo) : "—"}

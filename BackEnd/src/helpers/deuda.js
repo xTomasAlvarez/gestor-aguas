@@ -18,3 +18,13 @@ export const construirIncDeuda = (items = [], multiplicador = 1) => {
     }
     return inc;
 };
+
+// Construye el objeto $inc de Mongoose para la devolución física de envases.
+// Recibe objeto { bidones_20L, bidones_12L, sodas } y opcionalmente un multiplicador
+export const construirIncDevolucionEnvases = (envasesDevueltos = {}, multiplicador = 1) => {
+    const inc = {};
+    if (envasesDevueltos.bidones_20L) inc["deuda.bidones_20L"] = -(envasesDevueltos.bidones_20L * multiplicador);
+    if (envasesDevueltos.bidones_12L) inc["deuda.bidones_12L"] = -(envasesDevueltos.bidones_12L * multiplicador);
+    if (envasesDevueltos.sodas)       inc["deuda.sodas"]       = -(envasesDevueltos.sodas * multiplicador);
+    return inc;
+};
