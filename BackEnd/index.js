@@ -44,7 +44,7 @@ const corsOptions = {
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
             callback(null, true);
         } else {
-            console.warn("CORS BLOQUEADO PARA ORIGEN:", origin); // Log estricto para debugging
+            logger.warn(`CORS bloqueado para origen: ${origin}`); // Log estricto para debugging
             callback(new Error("Acceso bloqueado por políticas de CORS"));
         }
     },
