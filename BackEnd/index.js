@@ -5,7 +5,6 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
 
 // ── Importaciones internas ─────────────────────────────────────────────────
 import { dbConect } from "./src/config/dbConect.js";
@@ -72,8 +71,23 @@ app.use(helmet()); // Añade cabeceras HTTP seguras (anti-XSS, anti-Clickjacking
 // Parseo de JSON debe ir ANTES de sanitizar el body
 app.use(express.json({ limit: "1mb" })); // Límite de payload
 
-// Sanitización contra Inyecciones NoSQL
-app.use(mongoSanitize());
+// Sanitización contra inyecciones NoSQL (compatible con Express 5)
+app.use((req, res, next) => {
+    const sanitize = (obj) => {
+        if (obj && typeof obj === "object") {
+            for (const key of Object.keys(obj)) {
+                if (/^\$/.test(key)) {
+                    delete obj[key];
+                } else {
+                    sanitize(obj[key]);
+                }
+            }
+        }
+    };
+    if (req.body)   sanitize(req.body);
+    if (req.params) sanitize(req.params);
+    next();
+});
 
 // Limitador de Tráfico Global (DDoS Básico)
 const limiterGlobal = rateLimit({
