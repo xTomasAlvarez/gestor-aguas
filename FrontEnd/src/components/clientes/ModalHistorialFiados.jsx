@@ -18,8 +18,8 @@ const ModalHistorialFiados = ({ cliente }) => {
                     (v.cliente?._id === cliente._id || v.cliente === cliente._id) && 
                     ((v.total - (v.monto_pagado || 0) > 0) || v.metodo_pago === "fiado" || v.estado === "pago_parcial" || v.estado === "pendiente")
                 );
-                // Evitamos mostrar saldados a menos que su array venga enganchado
-                setVentas(fiados.filter(f => f.estado !== "saldado"));
+                // Guardar historial completo ledger
+                setVentas(fiados);
             } catch {
                 toast.error("Error al cargar el historial de fiados");
             } finally {
