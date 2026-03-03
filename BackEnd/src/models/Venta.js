@@ -63,6 +63,16 @@ const ventaSchema = new Schema(
             default: 0,
             min:     [0, "El monto pagado no puede ser negativo."],
         },
+        envases_devueltos: {
+            bidones_20L: { type: Number, default: 0, min: 0 },
+            bidones_12L: { type: Number, default: 0, min: 0 },
+            sodas:       { type: Number, default: 0, min: 0 }
+        },
+        estado: {
+            type:    String,
+            enum:    ["pendiente", "pago_parcial", "saldado"],
+            default: "pendiente",
+        },
         businessId: {
             type:    mongoose.Schema.Types.ObjectId,
             ref:     "Empresa",
