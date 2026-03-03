@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import usePagination from "../hooks/usePagination";
 import {
     obtenerClientes, crearCliente, actualizarCliente, eliminarCliente
 } from "../services/clienteService";
@@ -11,6 +12,7 @@ import FormCliente from "../components/clientes/FormCliente";
 import ClienteCard from "../components/clientes/ClienteCard";
 import ModalInactivos from "../components/clientes/ModalInactivos";
 import ModalHistorialFiados from "../components/clientes/ModalHistorialFiados";
+import Pagination from "../components/Pagination";
 // ── Página principal ──────────────────────────────────────────────────────
 const ClientesPage = () => {
     const [clientes,       setClientes]       = useState([]);
@@ -38,6 +40,38 @@ const ClientesPage = () => {
         const t = setTimeout(() => cargar(busqueda), 350);
         return () => clearTimeout(t);
     }, [busqueda, cargar]);
+
+    const clientesFiltrados = useMemo(() => clientes.filter((c) => {
+        const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
+        const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
+        let matchEst = true;
+        if (filtroEstado === "Con Deuda") {
+            const d = c.deuda || {};
+            matchEst = d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0);
+        } else if (filtroEstado === "Al Día") {
+            const d = c.deuda || {};
+            matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
+        }
+        return matchBusqueda && matchLoc && matchEst;
+    }), [clientes, busqueda, filtroLocalidad, filtroEstado]);
+
+    // Paginación con Hook
+    const {
+        paginaActual,
+        setPaginaActual,
+        itemsPorPagina,
+        setItemsPorPagina,
+        resetPagination,
+        items: clientesPaginados,
+        totalPaginas,
+        indiceInicio,
+        indiceFin
+    } = usePagination({ data: clientesFiltrados, initialItemsPerPage: 10 });
+
+    // Resetear a página 1 cuando cambien los filtros
+    useEffect(() => {
+        resetPagination();
+    }, [busqueda, filtroLocalidad, filtroEstado, itemsPorPagina, resetPagination]);
 
     const handleCrear = async (form) => {
         const tid = toast.loading("Guardando cliente...");
@@ -70,6 +104,7 @@ const ClientesPage = () => {
         try {
             await eliminarCliente(cliente._id);
             setClientes((p) => p.filter((c) => c._id !== cliente._id));
+            setConfirmarDesact(null);
             toast.success(`${cliente.nombre} desactivado correctamente.`, { id: tid });
         } catch {
             toast.error("Error al desactivar el cliente.", { id: tid });
@@ -84,19 +119,7 @@ const ClientesPage = () => {
     // ── Lógica de Filtrado Local ──
     const localidadesUnicas = ["Todas", ...new Set(clientes.map(c => c.localidad).filter(Boolean))].sort();
 
-    const clientesFiltrados = clientes.filter((c) => {
-        const matchBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
-        const matchLoc = filtroLocalidad === "Todas" || c.localidad === filtroLocalidad;
-        let matchEst = true;
-        if (filtroEstado === "Con Deuda") {
-            const d = c.deuda || {};
-            matchEst = d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0);
-        } else if (filtroEstado === "Al Día") {
-            const d = c.deuda || {};
-            matchEst = !(d.bidones_20L > 0 || d.bidones_12L > 0 || d.sodas > 0 || (c.saldo_pendiente > 0));
-        }
-        return matchBusqueda && matchLoc && matchEst;
-    });
+
 
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8 pb-24 sm:pb-8">
@@ -139,13 +162,29 @@ const ClientesPage = () => {
             {error && !cargando && <div className="max-w-6xl mx-auto bg-red-50 border border-red-200 text-red-600 rounded-xl px-5 py-4 text-sm">{error}</div>}
             {!cargando && !error && clientesFiltrados.length === 0 && <p className="max-w-6xl mx-auto text-center py-16 text-slate-400">No se encontraron clientes activos con los filtros aplicados.</p>}
             {!cargando && !error && clientesFiltrados.length > 0 && (
-                <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {clientesFiltrados.map((c) => (
-                        <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
-                            onDesactivar={(cli) => setConfirmarDesact(cli)}
-                            onVerHistorico={setClienteHistorial} />
-                    ))}
-                </div>
+                <>
+                    <div className="max-w-6xl mx-auto mb-6">
+                        <Pagination 
+                            paginaActual={paginaActual}
+                            totalPaginas={totalPaginas}
+                            itemsPorPagina={itemsPorPagina}
+                            totalItems={clientesFiltrados.length}
+                            indiceInicio={indiceInicio}
+                            indiceFin={indiceFin}
+                            setPaginaActual={setPaginaActual}
+                            setItemsPorPagina={setItemsPorPagina}
+                            itemLabel="clientes"
+                        />
+                    </div>
+
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {clientesPaginados.map((c) => (
+                            <ClienteCard key={c._id} cliente={c} onEditar={setEditando}
+                                onDesactivar={(cli) => setConfirmarDesact(cli)}
+                                onVerHistorico={setClienteHistorial} />
+                        ))}
+                    </div>
+                </>
             )}
 
             {/* Modal edición */}

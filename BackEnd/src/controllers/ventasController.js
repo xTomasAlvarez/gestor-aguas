@@ -1,6 +1,7 @@
+import mongoose from "mongoose";
 import Venta   from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
-import { construirIncDeuda, saldoPendiente } from "../helpers/deuda.js";
+import { construirIncDeuda, saldoPendiente, construirIncDevolucionEnvases } from "../helpers/deuda.js";
 
 const biz = (req) => req.usuario.businessId;
 
@@ -148,5 +149,83 @@ export const eliminarVenta = async (req, res) => {
     } catch (error) {
         console.error("[eliminarVenta]", error);
         res.status(500).json({ message: "Error al eliminar.", error: error.message });
+    }
+};
+
+// ── POST /api/ventas/cobrar (Liquidación de Ticket) ────────────────────────
+export const registrarCobranza = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const businessId = biz(req);
+        const { clienteId, ticketId, montoAbonado = 0, envasesDevueltos = {} } = req.body;
+
+        const venta = await Venta.findOne({ _id: ticketId, businessId, cliente: clienteId }).session(session);
+        if (!venta) throw new Error("Ticket no encontrado.");
+        if (venta.estado === "saldado") throw new Error("Esta venta ya se encuentra totalmente saldada.");
+
+        // Calcular lo prestado originalmente en este ticket
+        const prestados = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
+        for (const item of venta.items) {
+            if (item.producto === "Bidon 20L") prestados.bidones_20L += item.cantidad;
+            if (item.producto === "Bidon 12L") prestados.bidones_12L += item.cantidad;
+            if (item.producto === "Soda")      prestados.sodas       += item.cantidad;
+        }
+
+        // Validar topes
+        const deudaRestanteMonetaria = saldoPendiente(venta.total, venta.monto_pagado);
+        if (montoAbonado > deudaRestanteMonetaria) {
+            throw new Error(`El monto abonado excede la deuda actual del ticket ($${deudaRestanteMonetaria}).`);
+        }
+
+        const devueltosAntes = venta.envases_devueltos || { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
+        const reqEnvases = {
+            bidones_20L: envasesDevueltos.bidones_20L || 0,
+            bidones_12L: envasesDevueltos.bidones_12L || 0,
+            sodas:       envasesDevueltos.sodas || 0
+        };
+
+        if (devueltosAntes.bidones_20L + reqEnvases.bidones_20L > prestados.bidones_20L) throw new Error("Se intentan devolver más bidones de 20L de los prestados en el ticket.");
+        if (devueltosAntes.bidones_12L + reqEnvases.bidones_12L > prestados.bidones_12L) throw new Error("Se intentan devolver más bidones de 12L de los prestados en el ticket.");
+        if (devueltosAntes.sodas + reqEnvases.sodas > prestados.sodas) throw new Error("Se intentan devolver más sodas de las prestadas en el ticket.");
+
+        // Aplicar actualizaciones al Ticket
+        venta.monto_pagado += montoAbonado;
+        if (!venta.envases_devueltos) venta.envases_devueltos = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
+        venta.envases_devueltos.bidones_20L += reqEnvases.bidones_20L;
+        venta.envases_devueltos.bidones_12L += reqEnvases.bidones_12L;
+        venta.envases_devueltos.sodas       += reqEnvases.sodas;
+
+        // Determinar estado
+        const pagoCompleto = (venta.monto_pagado === venta.total);
+        const envases20Completos = (venta.envases_devueltos.bidones_20L === prestados.bidones_20L);
+        const envases12Completos = (venta.envases_devueltos.bidones_12L === prestados.bidones_12L);
+        const sodasCompletas     = (venta.envases_devueltos.sodas === prestados.sodas);
+
+        if (pagoCompleto && envases20Completos && envases12Completos && sodasCompletas) {
+            venta.estado = "saldado";
+        } else {
+            venta.estado = "pago_parcial";
+        }
+        await venta.save({ session });
+
+        // Actualizar saldo global del cliente
+        const incCliente = construirIncDevolucionEnvases(reqEnvases);
+        if (montoAbonado > 0) {
+            incCliente["deuda.saldo"] = -Math.abs(montoAbonado);
+        }
+
+        if (Object.keys(incCliente).length > 0) {
+            await Cliente.findByIdAndUpdate(clienteId, { $inc: incCliente }, { session });
+        }
+
+        await session.commitTransaction();
+        res.status(200).json({ message: "Cobranza registrada exitosamente.", venta });
+    } catch (error) {
+        await session.abortTransaction();
+        console.error("[registrarCobranza]", error);
+        res.status(400).json({ message: error.message || "Error al procesar la cobranza." });
+    } finally {
+        session.endSession();
     }
 };

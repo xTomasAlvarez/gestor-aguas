@@ -23,7 +23,12 @@ const TelInput = ({ value, onChange }) => {
     const [numero,  setNumero]  = useState("");
 
     useEffect(() => {
-        if (value && value.length > 3) {
+        if (!value) {
+            setNumero("");
+            return;
+        }
+        const currentPhone = armarTelefono(prefijo, area, numero);
+        if (value !== currentPhone && value.length > 3) {
             for (const pref of PREFIJOS) {
                 if (value.startsWith(pref.value)) {
                     const resto = value.slice(pref.value.length);
@@ -35,7 +40,7 @@ const TelInput = ({ value, onChange }) => {
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [value]);
 
     const actualizar = (p, a, n) => onChange(armarTelefono(p, a, n));
     const sm = "px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-sm";
