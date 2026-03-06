@@ -9,6 +9,11 @@ import {
     toggleEstado,
 } from "../controllers/clienteController.js";
 import { proteger } from "../middleware/authMiddleware.js";
+import {
+    validarCrearCliente,
+    validarActualizarCliente
+} from "../middleware/validators/clientesValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger); // todas las rutas requieren JWT
@@ -17,13 +22,13 @@ router.get("/inactivos", obtenerInactivos); // ANTES de /:id para que no colisio
 
 router.route("/")
     .get(obtenerClientes)
-    .post(crearCliente);
+    .post(validarCrearCliente, crearCliente);
 
-router.patch("/:id/estado", toggleEstado);
+router.patch("/:id/estado", validateObjectId, toggleEstado);
 
 router.route("/:id")
-    .get(obtenerClientePorId)
-    .put(actualizarCliente)
-    .delete(eliminarCliente);
+    .get(validateObjectId, obtenerClientePorId)
+    .put(validateObjectId, validarActualizarCliente, actualizarCliente)
+    .delete(validateObjectId, eliminarCliente);
 
 export default router;

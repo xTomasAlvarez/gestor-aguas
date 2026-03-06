@@ -2,6 +2,10 @@ import { Router }            from "express";
 import { registrar, login, obtenerSesionActual } from "../controllers/authController.js";
 import { proteger } from "../middleware/authMiddleware.js";
 import rateLimit from "express-rate-limit";
+import {
+    validarRegistrar,
+    validarLogin
+} from "../middleware/validators/authValidator.js";
 
 const router = Router();
 
@@ -14,8 +18,8 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-router.post("/registrar", authLimiter, registrar);
-router.post("/login",     authLimiter, login);
+router.post("/registrar", authLimiter, validarRegistrar, registrar);
+router.post("/login",     authLimiter, validarLogin,     login);
 router.get("/me", proteger, obtenerSesionActual); // Verifica token e hidrata la página
 
 export default router;
