@@ -35,6 +35,7 @@ const corsOptions = {
     origin: function (origin, callback) {
         const allowedOrigins = [
             process.env.FRONTEND_URL, // La URL principal (producción o el localhost de tu .env)
+            "https://h2app-one.vercel.app",
             "http://localhost:5173",  // Vite por defecto
             "http://127.0.0.1:5173"   // Alternativa local
         ];
