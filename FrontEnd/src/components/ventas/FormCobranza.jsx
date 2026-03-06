@@ -149,6 +149,9 @@ const FormCobranza = ({ clienteId, onExito, onCancelar }) => {
                     searchable
                     clearable
                     nothingFoundMessage="No hay tickets impagos"
+                    comboboxProps={{ portalProps: { target: 'body' }, withinPortal: true }}
+                    // Prevent virtualized rendering glitch over touch layers in forms inside modals
+                    maxDropdownHeight={250}
                 />
 
                 {(!cargando && ticketSelectOptions.length === 0) ? (
@@ -173,6 +176,9 @@ const FormCobranza = ({ clienteId, onExito, onCancelar }) => {
                                 max={maxMonto}
                                 hideControls
                                 size="md"
+                                // Prevenir auto zoom de iOS y saltos bruscos
+                                onFocus={(e) => e.target.select()}
+                                inputMode="numeric"
                             />
 
                             {(maxEnvases.bidones_20L > 0) ? (

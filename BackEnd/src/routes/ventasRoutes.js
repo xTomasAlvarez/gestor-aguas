@@ -8,19 +8,25 @@ import {
     registrarCobranza
 } from "../controllers/ventasController.js";
 import { proteger } from "../middleware/authMiddleware.js";
+import {
+    validarCrearVenta,
+    validarRegistrarCobranza,
+    validarActualizarVenta
+} from "../middleware/validators/ventasValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger);
 
 router.route("/")
     .get(obtenerVentas)
-    .post(crearVenta);
+    .post(validarCrearVenta, crearVenta);
 
-router.post("/cobrar", registrarCobranza);
+router.post("/cobrar", validarRegistrarCobranza, registrarCobranza);
 
 router.route("/:id")
-    .get(obtenerVentaPorId)
-    .put(actualizarVenta)
-    .delete(eliminarVenta);
+    .get(validateObjectId, obtenerVentaPorId)
+    .put(validateObjectId, validarActualizarVenta, actualizarVenta)
+    .delete(validateObjectId, eliminarVenta);
 
 export default router;

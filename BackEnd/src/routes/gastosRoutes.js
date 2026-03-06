@@ -7,17 +7,22 @@ import {
     eliminarGasto,
 } from "../controllers/gastosController.js";
 import { proteger } from "../middleware/authMiddleware.js";
+import {
+    validarCrearGasto,
+    validarActualizarGasto
+} from "../middleware/validators/gastosValidator.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 router.use(proteger);
 
 router.route("/")
     .get(obtenerGastos)
-    .post(crearGasto);
+    .post(validarCrearGasto, crearGasto);
 
 router.route("/:id")
-    .get(obtenerGastoPorId)
-    .put(actualizarGasto)
-    .delete(eliminarGasto);
+    .get(validateObjectId, obtenerGastoPorId)
+    .put(validateObjectId, validarActualizarGasto, actualizarGasto)
+    .delete(validateObjectId, eliminarGasto);
 
 export default router;
