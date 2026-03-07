@@ -44,12 +44,4 @@ export const obtenerEmpresa = async (req, res) => {
     }
 };
 
-// ── GET /api/admin/migrar-cobranzas-viejas ─────────────────────────────────
-export const migrarCobranzasViejas = async (req, res) => {
-    try {
-        const resultado = await AdminService.migrarCobranzasViejas(req.usuario.businessId);
-        res.json(resultado);
-    } catch (error) {
-        res.status(error.status || 500).json({ message: error.message });
-    }
-};
+
