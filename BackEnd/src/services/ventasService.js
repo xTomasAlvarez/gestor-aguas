@@ -32,10 +32,33 @@ export const crearVenta = async (body, businessId) => {
 };
 
 // ── obtenerVentas ──────────────────────────────────────────────────────────
-export const obtenerVentas = async (businessId) => {
-    return await Venta.find({ businessId })
+export const obtenerVentas = async (businessId, fechaStr) => {
+    let filtroVentas = { businessId };
+
+    if (fechaStr) {
+        // Filtrar por dia específico (inicio a fin del dia en UTC o ISO)
+        // Se asume fechaStr = "YYYY-MM-DD"
+        const inicio = new Date(`${fechaStr}T00:00:00.000Z`);
+        const fin = new Date(`${fechaStr}T23:59:59.999Z`);
+        filtroVentas.fecha = { $gte: inicio, $lte: fin };
+    }
+
+    const ventas = await Venta.find(filtroVentas)
         .populate("cliente", "nombre direccion")
         .sort({ fecha: -1 });
+
+    if (fechaStr) {
+        const inicio = new Date(`${fechaStr}T00:00:00.000Z`);
+        const fin = new Date(`${fechaStr}T23:59:59.999Z`);
+        const cobranzasExtra = await Cobranza.find({
+            businessId,
+            fecha: { $gte: inicio, $lte: fin }
+        }).populate("cliente", "nombre direccion").sort({ fecha: -1 });
+
+        return { ventas, cobranzasExtra };
+    }
+
+    return ventas;
 };
 
 // ── obtenerVentaPorId ──────────────────────────────────────────────────────
