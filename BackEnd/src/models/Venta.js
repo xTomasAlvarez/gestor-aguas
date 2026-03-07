@@ -7,7 +7,6 @@ const itemSchema = new Schema(
     {
         producto: {
             type:     String,
-            enum:     ["Bidon 20L", "Bidon 12L", "Soda"],
             required: [true, "El producto es obligatorio."],
         },
         cantidad: {
