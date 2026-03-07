@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Venta   from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
+import Cobranza from "../models/Cobranza.js";
 import { construirIncDeuda, saldoPendiente, construirIncDevolucionEnvases } from "../helpers/deuda.js";
 
 // ── crearVenta ─────────────────────────────────────────────────────────────
@@ -31,10 +32,33 @@ export const crearVenta = async (body, businessId) => {
 };
 
 // ── obtenerVentas ──────────────────────────────────────────────────────────
-export const obtenerVentas = async (businessId) => {
-    return await Venta.find({ businessId })
+export const obtenerVentas = async (businessId, fechaStr) => {
+    let filtroVentas = { businessId };
+
+    if (fechaStr) {
+        // Filtrar por dia específico (inicio a fin del dia en UTC o ISO)
+        // Se asume fechaStr = "YYYY-MM-DD"
+        const inicio = new Date(`${fechaStr}T00:00:00.000Z`);
+        const fin = new Date(`${fechaStr}T23:59:59.999Z`);
+        filtroVentas.fecha = { $gte: inicio, $lte: fin };
+    }
+
+    const ventas = await Venta.find(filtroVentas)
         .populate("cliente", "nombre direccion")
         .sort({ fecha: -1 });
+
+    if (fechaStr) {
+        const inicio = new Date(`${fechaStr}T00:00:00.000Z`);
+        const fin = new Date(`${fechaStr}T23:59:59.999Z`);
+        const cobranzasExtra = await Cobranza.find({
+            businessId,
+            fecha: { $gte: inicio, $lte: fin }
+        }).populate("cliente", "nombre direccion").sort({ fecha: -1 });
+
+        return { ventas, cobranzasExtra };
+    }
+
+    return ventas;
 };
 
 // ── obtenerVentaPorId ──────────────────────────────────────────────────────
@@ -142,7 +166,7 @@ export const registrarCobranza = async (body, businessId) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { clienteId, ticketId, montoAbonado = 0, envasesDevueltos = {} } = body;
+        const { clienteId, ticketId, montoAbonado = 0, envasesDevueltos = {}, metodoPago = "efectivo" } = body;
 
         const venta = await Venta.findOne({ _id: ticketId, businessId, cliente: clienteId }).session(session);
         if (!venta) throw new Error("Ticket no encontrado.");
@@ -197,6 +221,15 @@ export const registrarCobranza = async (body, businessId) => {
         const incCliente = construirIncDevolucionEnvases(reqEnvases);
         if (montoAbonado > 0) {
             incCliente["deuda.saldo"] = -Math.abs(montoAbonado);
+            
+            // Generar documento de Cobranza
+            await Cobranza.create([{
+                venta: venta._id,
+                cliente: clienteId,
+                monto: montoAbonado,
+                metodoPago: metodoPago,
+                businessId: businessId
+            }], { session });
         }
 
         if (Object.keys(incCliente).length > 0) {

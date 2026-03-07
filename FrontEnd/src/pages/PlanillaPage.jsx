@@ -15,7 +15,15 @@ const cantProd = (items, prod) => {
 };
 
 // ── Badge de método de pago ────────────────────────────────────────────────
-const MetodoBadge = ({ metodo }) => {
+const MetodoBadge = ({ metodo, fechaSaldado }) => {
+    if (metodo === "fiado" && fechaSaldado) {
+        return (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-teal-50 text-teal-700 border-teal-200">
+                Saldado: {fechaSaldado}
+            </span>
+        );
+    }
+
     const map = {
         efectivo:      "bg-emerald-50 text-emerald-700 border-emerald-200",
         fiado:         "bg-red-50    text-red-700    border-red-200",
@@ -101,7 +109,14 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                                     {saldo > 0 ? formatPeso(saldo) : "—"}
                                 </td>
                                 <td className="text-center px-3 py-3">
-                                    <MetodoBadge metodo={v.metodo_pago} />
+                                    <MetodoBadge 
+                                        metodo={v.metodo_pago} 
+                                        fechaSaldado={
+                                            v.metodo_pago === 'fiado' && v.estado === 'saldado' && v.updatedAt 
+                                                ? new Date(v.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) 
+                                                : null
+                                        } 
+                                    />
                                 </td>
                             </tr>
                         );
@@ -223,14 +238,47 @@ const TablaLlenados = ({ llenados }) => {
     );
 };
 
+// ── SECCIÓN 2 Centro: Cobranzas de Fiados Anteriores ─────────────────────
+const TablaCobranzas = ({ cobranzas }) => {
+    return (
+        <div className="mt-6">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Cobranzas Extra (Fiados anteriores)</h3>
+            {cobranzas.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">No se registraron cobros de deudas anteriores en este día.</p>
+            ) : (
+                <table className="w-full text-sm border-collapse">
+                    <tbody>
+                        {cobranzas.map((c) => (
+                            <tr key={c._id} className="border-b border-slate-100 last:border-0">
+                                <td className="py-2.5">
+                                    <p className="font-semibold text-slate-700">{c.cliente?.nombre || "—"}</p>
+                                </td>
+                                <td className="py-2.5 text-right font-bold text-emerald-700">{formatPeso(c.monto)}</td>
+                                <td className="py-2.5 text-right">
+                                    <MetodoBadge metodo={c.metodoPago || c.metodo_pago} />
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
+};
+
 // ── SECCIÓN 2 Derecha: Arqueo de caja ────────────────────────────────────
-const ArqueoCaja = ({ ventas, gastos }) => {
-    // Ingresos reales = suma de monto_pagado de todas las ventas
-    const totalCobrado        = ventas.reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const ingresosEfectivo    = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const cobradoFiado        = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + (v.monto_pagado ?? 0), 0);
+const ArqueoCaja = ({ ventas, gastos, cobranzas }) => {
+    // Ingresos Ventas del dia (ignorando "fiado" para el cálculo de caja en efectivo/transferencia)
+    let ingresosEfectivo      = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    let ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    // Para fiado solo llevamos cuenta de lo pendiente (monto no cobrado / histórico)
     const pendienteFiado      = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? 0)), 0);
+
+    // Ingresos por Cobranzas extra de días anteriores
+    ingresosEfectivo      += cobranzas.filter(c => (c.metodoPago || c.metodo_pago) === "efectivo").reduce((acc, c) => acc + c.monto, 0);
+    ingresosTransferencia += cobranzas.filter(c => (c.metodoPago || c.metodo_pago) === "transferencia").reduce((acc, c) => acc + c.monto, 0);
+
+    const totalCobrado        = ingresosEfectivo + ingresosTransferencia;
     const totalEgresos        = gastos.reduce((acc, g) => acc + g.monto, 0);
     const cajaFinal           = totalCobrado - totalEgresos;
 
@@ -255,10 +303,6 @@ const ArqueoCaja = ({ ventas, gastos }) => {
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300">Transferencia</p>
                     <p className="text-sm font-bold text-blue-400">{formatPeso(ingresosTransferencia)}</p>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-700">
-                    <p className="text-sm text-slate-300">Fiado (cobrado parcial)</p>
-                    <p className="text-sm font-bold text-amber-400">{formatPeso(cobradoFiado)}</p>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300 flex items-center gap-2">
@@ -301,6 +345,7 @@ const ArqueoCaja = ({ ventas, gastos }) => {
 const PlanillaPage = () => {
     const [fecha,    setFecha]    = useState(hoyStr);
     const [ventas,   setVentas]   = useState([]);
+    const [cobranzasExtra, setCobranzasExtra] = useState([]);
     const [gastos,   setGastos]   = useState([]);
     const [llenados, setLlenados] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -311,12 +356,21 @@ const PlanillaPage = () => {
             try {
                 setCargando(true);
                 setError(null);
-                const [{ data: v }, { data: g }, { data: l }] = await Promise.all([
-                    obtenerVentas(),
+                const [{ data: resVentas }, { data: g }, { data: l }] = await Promise.all([
+                    obtenerVentas(fecha),
                     obtenerGastos(),
                     obtenerLlenados(),
                 ]);
-                setVentas(v);
+                
+                // Extraer de la respuesta estructurada o por fallback
+                if (resVentas && !Array.isArray(resVentas)) {
+                    setVentas(resVentas.ventas || []);
+                    setCobranzasExtra(resVentas.cobranzasExtra || []);
+                } else {
+                    setVentas(resVentas || []);
+                    setCobranzasExtra([]);
+                }
+                
                 setGastos(g);
                 setLlenados(l);
             } catch {
@@ -326,10 +380,11 @@ const PlanillaPage = () => {
             }
         };
         cargar();
-    }, []);
+    }, [fecha]);
 
-    // Filtrar por día seleccionado
-    const ventasDia   = useMemo(() => ventas.filter((v)   => dayKey(v.fecha)   === fecha), [ventas,   fecha]);
+    // Ya no se filtran las ventas en memoria, el API devuelve las de "fecha" estrictamente
+    const ventasDia   = ventas;
+    const cobranzasDia = cobranzasExtra;
     const gastosDia   = useMemo(() => gastos.filter((g)   => dayKey(g.fecha)   === fecha), [gastos,   fecha]);
     const llenadosDia = useMemo(() => llenados.filter((l) => dayKey(l.fecha)   === fecha), [llenados, fecha]);
 
@@ -433,14 +488,15 @@ const PlanillaPage = () => {
 
                     {/* ── SECCIÓN 2: Paneles inferiores ────────────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Izquierda: Gastos + Llenados */}
+                        {/* Izquierda: Gastos + Llenados + Cobranzas Extra */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5">
                             <TablaGastos  gastos={gastosDia} />
                             <TablaLlenados llenados={llenadosDia} />
+                            <TablaCobranzas cobranzas={cobranzasDia} />
                         </div>
 
                         {/* Derecha: Arqueo de caja */}
-                        <ArqueoCaja ventas={ventasDia} gastos={gastosDia} />
+                        <ArqueoCaja ventas={ventasDia} gastos={gastosDia} cobranzas={cobranzasDia} />
                     </div>
                 </div>
             )}
