@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Select, Button, Paper, Group, Stack, NumberInput } from "@mantine/core";
+import { Select, NativeSelect, Button, Paper, Group, Stack, NumberInput } from "@mantine/core";
 import CounterInput from "../CounterInput";
 import { obtenerVentas, registrarCobranza } from "../../services/ventasService";
 import { formatPeso, formatFecha } from "../../utils/format";
@@ -11,6 +11,7 @@ const FormCobranza = ({ clienteId, onExito, onCancelar }) => {
     
     const [ticketId, setTicketId] = useState(null);
     const [montoAbonado, setMontoAbonado] = useState("");
+    const [metodoPago, setMetodoPago] = useState("efectivo");
     const [envases, setEnvases] = useState({ bidones_20L: 0, bidones_12L: 0, sodas: 0 });
     const [enviando, setEnviando] = useState(false);
 
@@ -107,7 +108,8 @@ const FormCobranza = ({ clienteId, onExito, onCancelar }) => {
             clienteId,
             ticketId,
             montoAbonado: abonoNumeric,
-            envasesDevueltos: envases
+            envasesDevueltos: envases,
+            metodoPago
         };
 
         console.log("1. Iniciando petición al backend...", payload);
@@ -180,6 +182,19 @@ const FormCobranza = ({ clienteId, onExito, onCancelar }) => {
                                 onFocus={(e) => e.target.select()}
                                 inputMode="numeric"
                             />
+
+                            {montoAbonado !== "" && Number(montoAbonado) > 0 && (
+                                <NativeSelect
+                                    label="Método de Pago"
+                                    required
+                                    data={[
+                                        { value: 'efectivo', label: 'Efectivo' },
+                                        { value: 'transferencia', label: 'Transferencia' }
+                                    ]}
+                                    value={metodoPago}
+                                    onChange={(event) => setMetodoPago(event.currentTarget.value)}
+                                />
+                            )}
 
                             {(maxEnvases.bidones_20L > 0) ? (
                                 <CounterInput
