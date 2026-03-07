@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Venta   from "../models/Venta.js";
 import Cliente from "../models/Cliente.js";
+import Cobranza from "../models/Cobranza.js";
 import { construirIncDeuda, saldoPendiente, construirIncDevolucionEnvases } from "../helpers/deuda.js";
 
 // ── crearVenta ─────────────────────────────────────────────────────────────
@@ -142,7 +143,7 @@ export const registrarCobranza = async (body, businessId) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { clienteId, ticketId, montoAbonado = 0, envasesDevueltos = {} } = body;
+        const { clienteId, ticketId, montoAbonado = 0, envasesDevueltos = {}, metodoPago = "efectivo" } = body;
 
         const venta = await Venta.findOne({ _id: ticketId, businessId, cliente: clienteId }).session(session);
         if (!venta) throw new Error("Ticket no encontrado.");
@@ -197,6 +198,15 @@ export const registrarCobranza = async (body, businessId) => {
         const incCliente = construirIncDevolucionEnvases(reqEnvases);
         if (montoAbonado > 0) {
             incCliente["deuda.saldo"] = -Math.abs(montoAbonado);
+            
+            // Generar documento de Cobranza
+            await Cobranza.create([{
+                venta: venta._id,
+                cliente: clienteId,
+                monto: montoAbonado,
+                metodoPago: metodoPago,
+                businessId: businessId
+            }], { session });
         }
 
         if (Object.keys(incCliente).length > 0) {

@@ -46,6 +46,7 @@ export const validarRegistrarCobranza = [
     body("clienteId").isMongoId().withMessage("Debe ser un MongoId válido"),
     body("ticketId").isMongoId().withMessage("Debe ser un MongoId válido"),
     body("montoAbonado").optional().isFloat({ min: 0 }).withMessage("Debe ser número mayor o igual a 0"),
+    body("metodoPago").optional().isIn(["efectivo", "transferencia"]).withMessage("Método de pago inválido"),
     body("envasesDevueltos").optional().isObject().withMessage("Debe ser un objeto"),
     body("envasesDevueltos.bidones_20L").optional().isInt({ min: 0 }).withMessage("Debe ser entero >= 0"),
     body("envasesDevueltos.bidones_12L").optional().isInt({ min: 0 }).withMessage("Debe ser entero >= 0"),
