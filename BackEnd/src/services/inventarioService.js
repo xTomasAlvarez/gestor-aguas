@@ -1,108 +1,109 @@
 import Empresa from "../models/Empresa.js";
 import Cliente from "../models/Cliente.js";
+import mongoose from "mongoose";
 
 // ── obtenerDashboard ───────────────────────────────────────────────────────
 export const obtenerDashboard = async (businessId) => {
-    // Obtener inventario de la empresa
-    const empresa = await Empresa.findById(businessId).lean();
-    if (!empresa) {
-        const err = new Error("Empresa no encontrada.");
-        err.status = 404;
-        throw err;
-    }
+    const empresa = await Empresa.findById(businessId);
+    if (!empresa) throw Object.assign(new Error("Empresa no encontrada."), { status: 404 });
     
-    const inventario = empresa.inventario || {
-        bidones20L: { cantidadTotal: 0, costoReposicion: 0 },
-        bidones12L: { cantidadTotal: 0, costoReposicion: 0 },
-        sodas:      { cantidadTotal: 0, costoReposicion: 0 },
-        dispensers: { cantidadTotal: 0, costoReposicion: 0 }
+    let inventario = empresa.inventario || {};
+    let needsSave = false;
+
+    // ── MIGRACIÓN EN CALIENTE NATIVA ──
+    const migrationMap = {
+        bidones20L: "Bidon 20L",
+        bidones12L: "Bidon 12L",
+        sodas: "Soda",
+        dispensers: empresa.productos?.find(p => p.label?.toLowerCase().includes("dispenser"))?.key || "Dispenser"
     };
+
+    for (const [oldKey, newKey] of Object.entries(migrationMap)) {
+        if (inventario[oldKey] !== undefined) {
+             inventario[newKey] = { 
+                 cantidadTotal: inventario[oldKey].cantidadTotal || 0, 
+                 costoReposicion: inventario[oldKey].costoReposicion || 0 
+             };
+             delete inventario[oldKey];
+             needsSave = true;
+        }
+    }
+
+    if (needsSave) {
+        empresa.inventario = inventario;
+        empresa.markModified('inventario'); // Obligatorio para tipos Object/Mixed en Mongoose
+        await empresa.save();
+    }
 
     // Calcular "En Calle" sumando dispensersAsignados de clientes
     const agregacionClientes = await Cliente.aggregate([
-        { $match: { businessId } },
-        { $group: {
-            _id: null,
-            dispensersEnCalle: { $sum: "$dispensersAsignados" }
-        }}
-    ]);
+        { $match: { businessId: new mongoose.Types.ObjectId(businessId) } },
+        { $group: { _id: null, dispensersEnCalle: { $sum: "$dispensersAsignados" } } }
+    ]).catch(() => [{ dispensersEnCalle: 0 }]); // Fallback si businessId casting falla
     
     const dispensersEnCalle = agregacionClientes[0]?.dispensersEnCalle || 0;
 
-    // Construir la respuesta
-    // bidones20L, bidones12L, sodas asumen 100% en depósito al no rastrear comodatos de envases aún
-    const dashboard = {
-        bidones20L: {
-            total: inventario.bidones20L.cantidadTotal,
-            enCalle: 0,
-            enDeposito: inventario.bidones20L.cantidadTotal,
-            costoReposicion: inventario.bidones20L.costoReposicion,
-            valorizacion: inventario.bidones20L.cantidadTotal * inventario.bidones20L.costoReposicion
-        },
-        bidones12L: {
-            total: inventario.bidones12L.cantidadTotal,
-            enCalle: 0,
-            enDeposito: inventario.bidones12L.cantidadTotal,
-            costoReposicion: inventario.bidones12L.costoReposicion,
-            valorizacion: inventario.bidones12L.cantidadTotal * inventario.bidones12L.costoReposicion
-        },
-        sodas: {
-            total: inventario.sodas.cantidadTotal,
-            enCalle: 0,
-            enDeposito: inventario.sodas.cantidadTotal,
-            costoReposicion: inventario.sodas.costoReposicion,
-            valorizacion: inventario.sodas.cantidadTotal * inventario.sodas.costoReposicion
-        },
-        dispensers: {
-            total: inventario.dispensers.cantidadTotal,
-            enCalle: dispensersEnCalle,
-            enDeposito: Math.max(0, inventario.dispensers.cantidadTotal - dispensersEnCalle),
-            costoReposicion: inventario.dispensers.costoReposicion,
-            valorizacion: inventario.dispensers.cantidadTotal * inventario.dispensers.costoReposicion
-        }
-    };
+    // ── LECTURA DINÁMICA DE ITEMS ──
+    const dashboard = {};
+    let valorizacionTotal = 0;
+    
+    const productosBase = empresa.productos || [];
 
-    const valorizacionTotal = 
-        dashboard.bidones20L.valorizacion + 
-        dashboard.bidones12L.valorizacion + 
-        dashboard.sodas.valorizacion + 
-        dashboard.dispensers.valorizacion;
+    for (const prod of productosBase) {
+        const itemStock = inventario[prod.key] || { cantidadTotal: 0, costoReposicion: 0 };
+        const isDispenser = prod.label?.toLowerCase().includes("dispenser");
+        const enCalle = isDispenser ? dispensersEnCalle : 0;
+        const valorizacion = itemStock.cantidadTotal * itemStock.costoReposicion;
+
+        dashboard[prod.key] = {
+            label: prod.label,
+            total: itemStock.cantidadTotal,
+            enCalle: enCalle,
+            enDeposito: Math.max(0, itemStock.cantidadTotal - enCalle),
+            costoReposicion: itemStock.costoReposicion,
+            valorizacion: valorizacion
+        };
+        valorizacionTotal += valorizacion;
+    }
+
+    // Incluir huérfanos históricos
+    for (const [key, data] of Object.entries(inventario)) {
+        if (!dashboard[key]) {
+             const valorizacion = data.cantidadTotal * data.costoReposicion;
+             dashboard[key] = {
+                 label: key, 
+                 total: data.cantidadTotal,
+                 enCalle: 0,
+                 enDeposito: data.cantidadTotal,
+                 costoReposicion: data.costoReposicion,
+                 valorizacion: valorizacion
+             };
+             valorizacionTotal += valorizacion;
+        }
+    }
 
     return { items: dashboard, valorizacionTotal };
 };
 
 // ── actualizarInventario ───────────────────────────────────────────────────
 export const actualizarInventario = async (body, businessId) => {
-    // Cargar los campos existentes antes de pisar
-    const empresa = await Empresa.findById(businessId).lean();
-    if (!empresa) {
-        const err = new Error("Empresa no encontrada.");
-        err.status = 404;
-        throw err;
+    const empresa = await Empresa.findById(businessId);
+    if (!empresa) throw Object.assign(new Error("Empresa no encontrada."), { status: 404 });
+
+    let inventario = empresa.inventario || {};
+
+    for (const [key, data] of Object.entries(body)) {
+        if (!data || typeof data !== "object") continue;
+        const current = inventario[key] || { cantidadTotal: 0, costoReposicion: 0 };
+        inventario[key] = {
+            cantidadTotal: data.cantidadTotal !== undefined ? data.cantidadTotal : current.cantidadTotal,
+            costoReposicion: data.costoReposicion !== undefined ? data.costoReposicion : current.costoReposicion
+        };
     }
 
-    const inv = empresa.inventario || {};
+    empresa.inventario = inventario;
+    empresa.markModified('inventario');
+    await empresa.save();
 
-    const buildUpdate = (key, data) => {
-        if (!data) return inv[key] || { cantidadTotal: 0, costoReposicion: 0 };
-        return {
-            cantidadTotal: data.cantidadTotal !== undefined ? data.cantidadTotal : (inv[key]?.cantidadTotal || 0),
-            costoReposicion: data.costoReposicion !== undefined ? data.costoReposicion : (inv[key]?.costoReposicion || 0)
-        };
-    };
-
-    const update = {
-        "inventario.bidones20L": buildUpdate("bidones20L", body.bidones20L),
-        "inventario.bidones12L": buildUpdate("bidones12L", body.bidones12L),
-        "inventario.sodas":      buildUpdate("sodas", body.sodas),
-        "inventario.dispensers": buildUpdate("dispensers", body.dispensers),
-    };
-
-    const empresaActualizada = await Empresa.findByIdAndUpdate(
-        businessId,
-        { $set: update },
-        { new: true, runValidators: true }
-    ).lean();
-
-    return { message: "Inventario actualizado", inventario: empresaActualizada.inventario };
+    return { message: "Inventario actualizado", inventario: empresa.inventario };
 };

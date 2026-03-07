@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
 import { obtenerDashboardInventario, actualizarStock } from "../services/inventarioService";
-import { Package, Truck, Warehouse, DollarSign, Activity } from "lucide-react";
+import { Package, Truck, Warehouse, DollarSign } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatPeso } from "../utils/format";
 
-// Diccionario visual
-const ASSETS_INFO = {
-    bidones20L: { label: "Bidones 20L", color: "blue",  icon: Package },
-    bidones12L: { label: "Bidones 12L", color: "cyan",  icon: Package },
-    sodas:      { label: "Sodas",       color: "indigo", icon: Package },
-    dispensers: { label: "Dispensers",  color: "violet", icon: Activity }
-};
+const COLORS = ["blue", "cyan", "indigo", "violet", "emerald", "orange", "rose"];
 
 const InventarioPage = () => {
     const [dashboard, setDashboard] = useState(null);
@@ -95,22 +89,20 @@ const InventarioPage = () => {
 
                 {/* Grid de Activos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {Object.entries(ASSETS_INFO).map(([key, info]) => {
-                        const data = dashboard?.items[key];
-                        if (!data) return null;
-                        
+                    {dashboard?.items && Object.entries(dashboard.items).map(([key, data], index) => {
                         const isEditing = editMode === key;
+                        const color = COLORS[index % COLORS.length];
 
                         return (
                             <div key={key} className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
                                 
                                 {/* Header del Activo */}
-                                <div className={`bg-${info.color}-50 px-6 py-4 flex items-center justify-between border-b border-${info.color}-100`}>
+                                <div className={`bg-${color}-50 px-6 py-4 flex items-center justify-between border-b border-${color}-100`}>
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl bg-${info.color}-200 flex items-center justify-center`}>
-                                            <info.icon className={`w-5 h-5 text-${info.color}-700`} />
+                                        <div className={`w-10 h-10 rounded-xl bg-${color}-200 flex items-center justify-center`}>
+                                            <Package className={`w-5 h-5 text-${color}-700`} />
                                         </div>
-                                        <h2 className={`text-lg font-bold text-${info.color}-900`}>{info.label}</h2>
+                                        <h2 className={`text-lg font-bold text-${color}-900`}>{data.label}</h2>
                                     </div>
                                     {!isEditing ? (
                                         <button onClick={() => iniciarEdicion(key, data)}
