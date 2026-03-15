@@ -1,0 +1,4 @@
+# Agentes y configuraciones locales
+.agents/
+.kiro/
+.vscode/
