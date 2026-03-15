@@ -18,7 +18,11 @@ import AccordionDia from "../components/ventas/AccordionDia";
 const ventaToForm = (v, catProductos) => {
     const prods = {};
     catProductos.forEach(p => { prods[p.key] = { cantidad: 0, precio_unitario: p.precioDefault }; });
-    v.items.forEach(({ producto, cantidad, precio_unitario }) => { prods[producto] = { cantidad, precio_unitario }; });
+    v.items.forEach(({ producto, cantidad, precio_unitario }) => { 
+        const match = catProductos.find(c => c.label === producto || c.key === producto);
+        if (match) prods[match.key] = { cantidad, precio_unitario };
+        else prods[producto] = { cantidad, precio_unitario }; 
+    });
     return {
         cliente:      v.cliente?._id || v.cliente,
         metodo_pago:  v.metodo_pago,

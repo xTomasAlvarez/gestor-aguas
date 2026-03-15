@@ -43,3 +43,5 @@ export const obtenerEmpresa = async (req, res) => {
         res.status(error.status || 500).json({ message: error.message });
     }
 };
+
+

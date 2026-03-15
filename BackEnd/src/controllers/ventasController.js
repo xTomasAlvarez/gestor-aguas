@@ -15,7 +15,8 @@ export const crearVenta = async (req, res) => {
 // ── GET /api/ventas ────────────────────────────────────────────────────────
 export const obtenerVentas = async (req, res) => {
     try {
-        const resultado = await VentasService.obtenerVentas(biz(req));
+        const { fecha } = req.query;
+        const resultado = await VentasService.obtenerVentas(biz(req), fecha);
         res.status(200).json(resultado);
     } catch (error) {
         res.status(error.status || 500).json({ message: error.message });

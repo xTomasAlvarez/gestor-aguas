@@ -16,11 +16,14 @@ import {
 import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
+
+
+// ── Candado para el resto de las rutas ──
 router.use(proteger);
 
 router.route("/")
-    .get(obtenerVentas)
-    .post(validarCrearVenta, crearVenta);
+.get(obtenerVentas)
+.post(validarCrearVenta, crearVenta);
 
 router.post("/cobrar", validarRegistrarCobranza, registrarCobranza);
 

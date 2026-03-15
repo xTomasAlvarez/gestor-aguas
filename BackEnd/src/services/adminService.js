@@ -1,5 +1,7 @@
 import Usuario from "../models/Usuario.js";
 import Empresa from "../models/Empresa.js";
+import Venta from "../models/Venta.js";
+import Cobranza from "../models/Cobranza.js";
 
 // ── listarUsuarios ─────────────────────────────────────────────────────────
 // Devuelve todos los usuarios de la empresa, sin exponer la contraseña.
@@ -59,4 +61,52 @@ export const obtenerEmpresa = async (businessId) => {
     }
 
     return empresa;
+};
+
+// ── migrarCobranzasViejas (One-off Script) ───────────────────────────────
+// Busca ventas saldadas o parcialmente pagadas sin Cobranza y las crea.
+export const migrarCobranzasViejas = async (businessId) => {
+    // Buscar todas las ventas que tengan algún abono (monto_pagado > 0 o total abonado en status)
+    // Para mitigar, agarramos todas las ventas del tenant que tengan monto_pagado > 0 o estado 'saldado'.
+    const ventas = await Venta.find({ 
+        businessId, 
+        $or: [
+            { estado: "saldado" },
+            { monto_pagado: { $gt: 0 } }
+        ] 
+    });
+
+    let creadas = 0;
+    
+    for (const venta of ventas) {
+        // Verificar si la venta tiene un pago real registrado
+        const pagoReal = venta.monto_pagado || 0;
+        
+        // Si el estado es saldado, aseguramos que el monto sea igual al total
+        const montoACobrar = (venta.estado === "saldado" && pagoReal === 0) ? venta.total : pagoReal;
+        
+        if (montoACobrar <= 0) continue; // Evitar crear cobranzas de $0
+
+        // Verificar si YA existe una Cobranza vinculada a esta Venta
+        const existeCobranza = await Cobranza.findOne({ venta: venta._id, businessId });
+        
+        if (!existeCobranza) {
+            const metodoValido = ["efectivo", "transferencia"].includes(venta.metodo_pago) ? venta.metodo_pago : "efectivo";
+            await Cobranza.create({
+                venta: venta._id,
+                cliente: venta.cliente,
+                monto: montoACobrar,
+                metodoPago: metodoValido,
+                fecha: venta.updatedAt || venta.fecha || new Date(),
+                businessId
+            });
+            creadas++;
+        }
+    }
+
+    return { 
+        message: "Migración de cobranzas legacy completada.", 
+        ventasAnalizadas: ventas.length, 
+        cobranzasCreadas: creadas 
+    };
 };

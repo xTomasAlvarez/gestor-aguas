@@ -4,7 +4,7 @@ import Pagination from "../components/Pagination";
 import { obtenerVentas }   from "../services/ventasService";
 import { obtenerGastos }   from "../services/gastosService";
 import { obtenerLlenados } from "../services/llenadoService";
-import { formatPeso, dayKey, hoyLocal } from "../utils/format";
+import { formatPeso, dayKey, hoyLocal, formatDate } from "../utils/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const hoyStr = hoyLocal();
@@ -15,7 +15,15 @@ const cantProd = (items, prod) => {
 };
 
 // ── Badge de método de pago ────────────────────────────────────────────────
-const MetodoBadge = ({ metodo }) => {
+const MetodoBadge = ({ metodo, fechaSaldado }) => {
+    if (metodo === "fiado" && fechaSaldado) {
+        return (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-teal-50 text-teal-700 border-teal-200">
+                Saldado: {fechaSaldado}
+            </span>
+        );
+    }
+
     const map = {
         efectivo:      "bg-emerald-50 text-emerald-700 border-emerald-200",
         fiado:         "bg-red-50    text-red-700    border-red-200",
@@ -36,6 +44,20 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
         <p className="text-center py-8 text-sm text-slate-400">Sin ventas para este dia.</p>
     );
 
+    // 1. Obtener productos únicos del día para las columnas dinámicas
+    const productosBaseConfig = ["Bidon 20L", "Bidon 12L", "Soda"];
+    const productosVendidos = new Set();
+    
+    listaParaTotal.forEach(v => {
+        v.items?.forEach(i => productosVendidos.add(i.producto));
+    });
+
+    // Merge: Mantener los base primero, luego los nuevos que se hayan vendido
+    const colsDinamicas = [
+        ...productosBaseConfig,
+        ...Array.from(productosVendidos).filter(p => !productosBaseConfig.includes(p))
+    ];
+
     const totalDia  = listaParaTotal.reduce((acc, v) => acc + v.total, 0);
     const totalEfectivo = listaParaTotal
         .filter(v => v.metodo_pago === "efectivo")
@@ -52,9 +74,11 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                 <thead>
                     <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
                         <th className="text-left px-4 py-3 rounded-tl-xl font-semibold">Cliente</th>
-                        <th className="text-center px-2 py-3 font-semibold">20L</th>
-                        <th className="text-center px-2 py-3 font-semibold">12L</th>
-                        <th className="text-center px-2 py-3 font-semibold">Soda</th>
+                        {colsDinamicas.map(prod => (
+                            <th key={prod} className="text-center px-2 py-3 font-semibold">
+                                {prod.replace("Bidon ", "")}
+                            </th>
+                        ))}
                         <th className="text-right px-3 py-3 font-semibold">Total</th>
                         <th className="text-right px-3 py-3 font-semibold text-emerald-700">Abono</th>
                         <th className="text-right px-3 py-3 font-semibold text-red-600">Saldo</th>
@@ -80,20 +104,21 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                                         <p className="text-xs text-slate-400 mt-0.5">{v.cliente.direccion}</p>
                                     )}
                                 </td>
-                                <td className="text-center px-2 py-3 font-bold text-slate-700">
-                                    {cantProd(v.items, "Bidon 20L") || <span className="text-slate-300">—</span>}
-                                </td>
-                                <td className="text-center px-2 py-3 font-bold text-slate-700">
-                                    {cantProd(v.items, "Bidon 12L") || <span className="text-slate-300">—</span>}
-                                </td>
-                                <td className="text-center px-2 py-3 font-bold text-slate-700">
-                                    {cantProd(v.items, "Soda") || <span className="text-slate-300">—</span>}
-                                </td>
+                                {colsDinamicas.map(prod => (
+                                    <td key={prod} className="text-center px-2 py-3 font-bold text-slate-700">
+                                        {cantProd(v.items, prod) || <span className="text-slate-300">—</span>}
+                                    </td>
+                                ))}
                                 <td className="text-right px-3 py-3 font-bold text-slate-800">
                                     {formatPeso(v.total)}
                                 </td>
                                 <td className="text-right px-3 py-3 font-semibold text-emerald-700">
                                     {formatPeso(abono)}
+                                    {v.metodo_pago === "fiado" && v.monto_pagado > 0 && v.updatedAt && (
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                            (Pagado el {formatDate(v.updatedAt)})
+                                        </p>
+                                    )}
                                 </td>
                                 <td className={`text-right px-3 py-3 font-bold ${
                                     saldo > 0 ? "text-red-600" : "text-slate-300"
@@ -101,7 +126,14 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                                     {saldo > 0 ? formatPeso(saldo) : "—"}
                                 </td>
                                 <td className="text-center px-3 py-3">
-                                    <MetodoBadge metodo={v.metodo_pago} />
+                                    <MetodoBadge 
+                                        metodo={v.metodo_pago} 
+                                        fechaSaldado={
+                                            v.metodo_pago === 'fiado' && v.estado === 'saldado' && v.updatedAt 
+                                                ? new Date(v.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) 
+                                                : null
+                                        } 
+                                    />
                                 </td>
                             </tr>
                         );
@@ -114,15 +146,11 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                             TOTAL DIA
                             <span className="ml-2 text-xs font-normal text-slate-500">({listaParaTotal.length} ventas)</span>
                         </td>
-                        <td className="text-center px-2 py-3">
-                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Bidon 20L"), 0) || "—"}
-                        </td>
-                        <td className="text-center px-2 py-3">
-                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Bidon 12L"), 0) || "—"}
-                        </td>
-                        <td className="text-center px-2 py-3">
-                            {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, "Soda"), 0) || "—"}
-                        </td>
+                        {colsDinamicas.map(prod => (
+                            <td key={prod} className="text-center px-2 py-3">
+                                {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, prod), 0) || "—"}
+                            </td>
+                        ))}
                         <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
                         <td className="text-right px-3 py-3 text-emerald-700">
                             {formatPeso(totalGeneral)}
@@ -223,14 +251,52 @@ const TablaLlenados = ({ llenados }) => {
     );
 };
 
+// ── SECCIÓN 2 Centro: Cobranzas de Fiados Anteriores ─────────────────────
+const TablaCobranzas = ({ cobranzas }) => {
+    return (
+        <div className="mt-6">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Cobranzas Extra (Fiados anteriores)</h3>
+            {cobranzas.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">No se registraron cobros de deudas anteriores en este día.</p>
+            ) : (
+                <table className="w-full text-sm border-collapse">
+                    <tbody>
+                        {cobranzas.map((c) => (
+                            <tr key={c._id} className="border-b border-slate-100 last:border-0">
+                                <td className="py-2.5">
+                                    <p className="font-semibold text-slate-700">{c.cliente?.nombre || "—"}</p>
+                                    {c.venta?.fecha && (
+                                        <p className="text-xs text-slate-400">
+                                            (Deuda del {formatDate(c.venta.fecha)})
+                                        </p>
+                                    )}
+                                </td>
+                                <td className="py-2.5 text-right font-bold text-emerald-700">{formatPeso(c.monto)}</td>
+                                <td className="py-2.5 text-right">
+                                    <MetodoBadge metodo={c.metodoPago || c.metodo_pago} />
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
+};
+
 // ── SECCIÓN 2 Derecha: Arqueo de caja ────────────────────────────────────
-const ArqueoCaja = ({ ventas, gastos }) => {
-    // Ingresos reales = suma de monto_pagado de todas las ventas
-    const totalCobrado        = ventas.reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const ingresosEfectivo    = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
-    const cobradoFiado        = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + (v.monto_pagado ?? 0), 0);
+const ArqueoCaja = ({ ventas, gastos, cobranzas }) => {
+    // Ingresos Ventas del dia (ignorando "fiado" para el cálculo de caja en efectivo/transferencia)
+    let ingresosEfectivo      = ventas.filter((v) => v.metodo_pago === "efectivo").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    let ingresosTransferencia = ventas.filter((v) => v.metodo_pago === "transferencia").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+    // Para fiado solo llevamos cuenta de lo pendiente (monto no cobrado / histórico)
     const pendienteFiado      = ventas.filter((v) => v.metodo_pago === "fiado").reduce((acc, v) => acc + Math.max(0, v.total - (v.monto_pagado ?? 0)), 0);
+
+    // Ingresos por Cobranzas extra de días anteriores
+    ingresosEfectivo      += cobranzas.filter(c => (c.metodoPago || c.metodo_pago) === "efectivo").reduce((acc, c) => acc + c.monto, 0);
+    ingresosTransferencia += cobranzas.filter(c => (c.metodoPago || c.metodo_pago) === "transferencia").reduce((acc, c) => acc + c.monto, 0);
+
+    const totalCobrado        = ingresosEfectivo + ingresosTransferencia;
     const totalEgresos        = gastos.reduce((acc, g) => acc + g.monto, 0);
     const cajaFinal           = totalCobrado - totalEgresos;
 
@@ -255,10 +321,6 @@ const ArqueoCaja = ({ ventas, gastos }) => {
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300">Transferencia</p>
                     <p className="text-sm font-bold text-blue-400">{formatPeso(ingresosTransferencia)}</p>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-700">
-                    <p className="text-sm text-slate-300">Fiado (cobrado parcial)</p>
-                    <p className="text-sm font-bold text-amber-400">{formatPeso(cobradoFiado)}</p>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-700">
                     <p className="text-sm text-slate-300 flex items-center gap-2">
@@ -301,6 +363,7 @@ const ArqueoCaja = ({ ventas, gastos }) => {
 const PlanillaPage = () => {
     const [fecha,    setFecha]    = useState(hoyStr);
     const [ventas,   setVentas]   = useState([]);
+    const [cobranzasExtra, setCobranzasExtra] = useState([]);
     const [gastos,   setGastos]   = useState([]);
     const [llenados, setLlenados] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -311,12 +374,21 @@ const PlanillaPage = () => {
             try {
                 setCargando(true);
                 setError(null);
-                const [{ data: v }, { data: g }, { data: l }] = await Promise.all([
-                    obtenerVentas(),
+                const [{ data: resVentas }, { data: g }, { data: l }] = await Promise.all([
+                    obtenerVentas(fecha),
                     obtenerGastos(),
                     obtenerLlenados(),
                 ]);
-                setVentas(v);
+                
+                // Extraer de la respuesta estructurada o por fallback
+                if (resVentas && !Array.isArray(resVentas)) {
+                    setVentas(resVentas.ventas || []);
+                    setCobranzasExtra(resVentas.cobranzasExtra || []);
+                } else {
+                    setVentas(resVentas || []);
+                    setCobranzasExtra([]);
+                }
+                
                 setGastos(g);
                 setLlenados(l);
             } catch {
@@ -326,10 +398,11 @@ const PlanillaPage = () => {
             }
         };
         cargar();
-    }, []);
+    }, [fecha]);
 
-    // Filtrar por día seleccionado
-    const ventasDia   = useMemo(() => ventas.filter((v)   => dayKey(v.fecha)   === fecha), [ventas,   fecha]);
+    // Ya no se filtran las ventas en memoria, el API devuelve las de "fecha" estrictamente
+    const ventasDia   = ventas;
+    const cobranzasDia = cobranzasExtra;
     const gastosDia   = useMemo(() => gastos.filter((g)   => dayKey(g.fecha)   === fecha), [gastos,   fecha]);
     const llenadosDia = useMemo(() => llenados.filter((l) => dayKey(l.fecha)   === fecha), [llenados, fecha]);
 
@@ -380,19 +453,25 @@ const PlanillaPage = () => {
 
                 {/* KPIs rápidos */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-                    {[
-                        { label: "Ventas",    valor: ventasDia.length,  sufijo: "entregas",    color: "text-slate-800" },
-                        { label: "Facturado", valor: formatPeso(ventasDia.reduce((a,v)=>a+v.total,0)), color: "text-blue-700" },
-                        { label: "Gastos",    valor: formatPeso(gastosDia.reduce((a,g)=>a+g.monto,0)), color: "text-orange-600" },
-                        { label: "Llenados",  valor: llenadosDia.length, sufijo: "cargas",      color: "text-slate-800" },
-                    ].map(({ label, valor, sufijo, color }) => (
-                        <div key={label} className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4">
+                    {(() => {
+                        const ingresosVentas = ventasDia.filter(v => v.metodo_pago !== "fiado").reduce((acc, v) => acc + (v.monto_pagado ?? v.total), 0);
+                        const ingresosCobranzas = cobranzasDia.reduce((acc, c) => acc + c.monto, 0);
+                        const totalIngresos = ingresosVentas + ingresosCobranzas;
+
+                        return [
+                            { label: "Ventas",    valor: ventasDia.length,  sufijo: "entregas",    color: "text-slate-800" },
+                            { label: "Ingresos",  valor: formatPeso(totalIngresos),                color: "text-emerald-600" },
+                            { label: "Gastos",    valor: formatPeso(gastosDia.reduce((a,g)=>a+g.monto,0)), color: "text-orange-600" },
+                            { label: "Llenados",  valor: llenadosDia.length, sufijo: "cargas",      color: "text-slate-800" },
+                        ].map(({ label, valor, sufijo, color }) => (
+                            <div key={label} className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-4">
                             <p className="text-xs text-slate-400 uppercase tracking-wider">{label}</p>
                             <p className={`text-xl font-extrabold mt-1 ${color}`}>
                                 {valor}{sufijo && <span className="text-xs font-normal text-slate-400 ml-1">{sufijo}</span>}
                             </p>
                         </div>
-                    ))}
+                    ));
+                    })()}
                 </div>
             </div>
 
@@ -433,14 +512,15 @@ const PlanillaPage = () => {
 
                     {/* ── SECCIÓN 2: Paneles inferiores ────────────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Izquierda: Gastos + Llenados */}
+                        {/* Izquierda: Gastos + Llenados + Cobranzas Extra */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5">
                             <TablaGastos  gastos={gastosDia} />
                             <TablaLlenados llenados={llenadosDia} />
+                            <TablaCobranzas cobranzas={cobranzasDia} />
                         </div>
 
                         {/* Derecha: Arqueo de caja */}
-                        <ArqueoCaja ventas={ventasDia} gastos={gastosDia} />
+                        <ArqueoCaja ventas={ventasDia} gastos={gastosDia} cobranzas={cobranzasDia} />
                     </div>
                 </div>
             )}
