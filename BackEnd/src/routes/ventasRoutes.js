@@ -5,7 +5,8 @@ import {
     obtenerVentaPorId,
     actualizarVenta,
     eliminarVenta,
-    registrarCobranza
+    registrarCobranza,
+    migrarFiadosLegacy
 } from "../controllers/ventasController.js";
 import { proteger } from "../middleware/authMiddleware.js";
 import {
@@ -23,6 +24,9 @@ router.route("/")
     .post(validarCrearVenta, crearVenta);
 
 router.post("/cobrar", validarRegistrarCobranza, registrarCobranza);
+
+// ── Ruta temporal de migración (eliminar después de usar) ──
+router.get("/migrar-fiados-legacy", migrarFiadosLegacy);
 
 router.route("/:id")
     .get(validateObjectId, obtenerVentaPorId)

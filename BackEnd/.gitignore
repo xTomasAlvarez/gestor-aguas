@@ -8,6 +8,8 @@ log/
 *.txt
 
 # Entorno de Trabajo
+.kiro/
+.agents/
 .vscode/
 .env
 

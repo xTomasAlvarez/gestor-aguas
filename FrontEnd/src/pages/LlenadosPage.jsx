@@ -14,14 +14,18 @@ import { useConfig } from "../context/ConfigContext";
 const llenadoToForm = (l, catProductos) => {
     const cantidades = {};
     catProductos.forEach(p => { cantidades[p.key] = 0; });
-    l.productos.forEach(({ producto, cantidad }) => { cantidades[producto] = cantidad; });
+    l.productos.forEach(({ producto, cantidad }) => { 
+        const match = catProductos.find(c => c.label === producto || c.key === producto);
+        if (match) cantidades[match.key] = cantidad;
+        else cantidades[producto] = cantidad;
+    });
     return { cantidades, costo_total: l.costo_total ?? "", fecha: isoToInputDate(l.fecha) };
 };
 
 const formToPayload = ({ cantidades, costo_total, fecha }, catProductos) => ({
     productos: catProductos
         .filter(({ key }) => Number(cantidades[key]) > 0)
-        .map(({ key }) => ({ producto: key, cantidad: Number(cantidades[key]) })),
+        .map(({ key, label }) => ({ producto: label || key, cantidad: Number(cantidades[key]) })),
     ...(costo_total !== "" && { costo_total: Number(costo_total) }),
     ...(fecha && { fecha: prepararFechaBackend(fecha) }),
 });

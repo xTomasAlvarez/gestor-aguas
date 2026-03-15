@@ -6,18 +6,21 @@ import { METODOS_PAGO as METODOS } from "../../utils/productos";
 import { inputCls, btnPrimary, btnSecondary } from "../../styles/cls";
 
 // Helpers
-const calcItems = (prods) =>
+const calcItems = (prods, productosBase) =>
     Object.entries(prods)
         .filter(([, v]) => Number(v.cantidad) > 0)
-        .map(([producto, v]) => ({
-            producto,
-            cantidad:        Number(v.cantidad),
-            precio_unitario: Number(v.precio_unitario),
-            subtotal:        Number(v.cantidad) * Number(v.precio_unitario),
-        }));
+        .map(([productoKey, v]) => {
+            const label = productosBase?.find(p => p.key === productoKey)?.label || productoKey;
+            return {
+                producto: label,
+                cantidad:        Number(v.cantidad),
+                precio_unitario: Number(v.precio_unitario),
+                subtotal:        Number(v.cantidad) * Number(v.precio_unitario),
+            };
+        });
 
-const calcTotal = (prods, descuento) =>
-    calcItems(prods).reduce((a, i) => a + i.subtotal, 0) - Number(descuento || 0);
+const calcTotal = (prods, descuento, productosBase) =>
+    calcItems(prods, productosBase).reduce((a, i) => a + i.subtotal, 0) - Number(descuento || 0);
 
 const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, onRefresh, inicial, esEdicion = false }) => {
     // Generar un estado por default basado en los productos dinámicos
@@ -32,8 +35,8 @@ const FormVenta = ({ clientes, productosBase, onGuardar, onCancelar, onRefresh, 
     const [error,    setError]    = useState(null);
 
     const esCobranza = form.esCobranza;
-    const items      = esCobranza ? [] : calcItems(form.productos);
-    const total      = esCobranza ? 0  : calcTotal(form.productos, form.descuento);
+    const items      = esCobranza ? [] : calcItems(form.productos, productosBase);
+    const total      = esCobranza ? 0  : calcTotal(form.productos, form.descuento, productosBase);
 
     // monto_pagado efectivo: si está vacío y no es cobranza, default = total (salvo fiado)
     let montoPagadoEfectivo;

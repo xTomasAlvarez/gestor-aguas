@@ -33,10 +33,8 @@ const empresaSchema = new mongoose.Schema({
         ]
     },
     inventario: {
-        bidones20L: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
-        bidones12L: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
-        sodas:      { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) },
-        dispensers: { type: inventarioItemSchema, default: () => ({ cantidadTotal: 0, costoReposicion: 0 }) }
+        type: Object,
+        default: {}
     }
 }, { timestamps: true, versionKey: false });
 
