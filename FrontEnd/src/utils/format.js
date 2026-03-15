@@ -46,6 +46,34 @@ export const formatPeso = (n) =>
         style: "currency", currency: "ARS", maximumFractionDigits: 0,
     }).format(n ?? 0);
 
+/**
+ * Formatea una fecha en formato DD/MM o DD/MM/YYYY
+ * @param {Date|string} fecha - Fecha a formatear
+ * @returns {string} Fecha formateada o cadena vacía si es inválida
+ */
+export const formatDate = (fecha) => {
+    if (!fecha) return "";
+    
+    try {
+        const date = new Date(fecha);
+        if (isNaN(date.getTime())) return "";
+        
+        // Usar UTC para evitar problemas de timezone
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const year = date.getUTCFullYear();
+        const currentYear = new Date().getUTCFullYear();
+        
+        if (year === currentYear) {
+            return `${day}/${month}`;
+        } else {
+            return `${day}/${month}/${year}`;
+        }
+    } catch {
+        return "";
+    }
+};
+
 // ── Clave de día para agrupar (YYYY-MM-DD) ────────────────────────────────
 export const dayKey = (iso) => {
     const d = new Date(iso);

@@ -53,7 +53,10 @@ export const obtenerVentas = async (businessId, fechaStr) => {
         const cobranzasExtra = await Cobranza.find({
             businessId,
             fecha: { $gte: inicio, $lte: fin }
-        }).populate("cliente", "nombre direccion").sort({ fecha: -1 });
+        })
+        .populate("cliente", "nombre direccion")
+        .populate("venta", "fecha")
+        .sort({ fecha: -1 });
 
         return { ventas, cobranzasExtra };
     }

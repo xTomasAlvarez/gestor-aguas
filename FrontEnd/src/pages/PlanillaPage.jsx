@@ -4,7 +4,7 @@ import Pagination from "../components/Pagination";
 import { obtenerVentas }   from "../services/ventasService";
 import { obtenerGastos }   from "../services/gastosService";
 import { obtenerLlenados } from "../services/llenadoService";
-import { formatPeso, dayKey, hoyLocal } from "../utils/format";
+import { formatPeso, dayKey, hoyLocal, formatDate } from "../utils/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const hoyStr = hoyLocal();
@@ -114,6 +114,11 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                                 </td>
                                 <td className="text-right px-3 py-3 font-semibold text-emerald-700">
                                     {formatPeso(abono)}
+                                    {v.metodo_pago === "fiado" && v.monto_pagado > 0 && v.updatedAt && (
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                            (Pagado el {formatDate(v.updatedAt)})
+                                        </p>
+                                    )}
                                 </td>
                                 <td className={`text-right px-3 py-3 font-bold ${
                                     saldo > 0 ? "text-red-600" : "text-slate-300"
@@ -260,6 +265,11 @@ const TablaCobranzas = ({ cobranzas }) => {
                             <tr key={c._id} className="border-b border-slate-100 last:border-0">
                                 <td className="py-2.5">
                                     <p className="font-semibold text-slate-700">{c.cliente?.nombre || "—"}</p>
+                                    {c.venta?.fecha && (
+                                        <p className="text-xs text-slate-400">
+                                            (Deuda del {formatDate(c.venta.fecha)})
+                                        </p>
+                                    )}
                                 </td>
                                 <td className="py-2.5 text-right font-bold text-emerald-700">{formatPeso(c.monto)}</td>
                                 <td className="py-2.5 text-right">
