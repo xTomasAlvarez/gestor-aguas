@@ -251,3 +251,51 @@ export const registrarCobranza = async (body, businessId) => {
         session.endSession();
     }
 };
+
+// ── migrarFiadosLegacy (Script temporal de migración) ──────────────────────
+export const migrarFiadosLegacy = async (businessId) => {
+    // Buscar todas las ventas a fiado del negocio
+    const ventasFiado = await Venta.find({ 
+        businessId, 
+        metodo_pago: "fiado" 
+    });
+
+    let revisados = 0;
+    let actualizados = 0;
+
+    for (const venta of ventasFiado) {
+        revisados++;
+        let necesitaActualizacion = false;
+
+        // Verificar si es una venta legacy (sin monto_pagado definido o es undefined)
+        if (venta.monto_pagado === undefined || venta.monto_pagado === null) {
+            venta.monto_pagado = 0;
+            necesitaActualizacion = true;
+        }
+
+        // Verificar si necesita actualizar el estado
+        if (!venta.estado || venta.estado === undefined) {
+            // Determinar el estado basado en monto_pagado vs total
+            if (venta.monto_pagado >= venta.total) {
+                venta.estado = "saldado";
+            } else if (venta.monto_pagado > 0) {
+                venta.estado = "pago_parcial";
+            } else {
+                venta.estado = "pendiente";
+            }
+            necesitaActualizacion = true;
+        }
+
+        // Guardar solo si hubo cambios
+        if (necesitaActualizacion) {
+            await venta.save();
+            actualizados++;
+        }
+    }
+
+    return {
+        message: "Migración de fiados legacy completada",
+        revisados,
+        actualizados
+    };
+};

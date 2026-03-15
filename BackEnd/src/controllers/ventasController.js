@@ -65,3 +65,26 @@ export const registrarCobranza = async (req, res) => {
         res.status(error.status || 400).json({ message: error.message });
     }
 };
+
+
+// ── GET /api/ventas/migrar-fiados-legacy (Script temporal de migración) ────
+export const migrarFiadosLegacy = async (req, res) => {
+    try {
+        const resultado = await VentasService.migrarFiadosLegacy(biz(req));
+        res.status(200).json(resultado);
+    } catch (error) {
+        res.status(error.status || 500).json({ message: error.message });
+    }
+};
+
+
+
+// ── GET /api/ventas/migrar-fiados-legacy (Script temporal de migración) ────
+export const migrarFiadosLegacy = async (req, res) => {
+    try {
+        const resultado = await VentasService.migrarFiadosLegacy(biz(req));
+        res.status(200).json(resultado);
+    } catch (error) {
+        res.status(error.status || 500).json({ message: error.message });
+    }
+};
