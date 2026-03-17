@@ -9,8 +9,8 @@ import { formatPeso, dayKey, hoyLocal, formatDate } from "../utils/format";
 // ── Helpers ────────────────────────────────────────────────────────────────
 const hoyStr = hoyLocal();
 
-const cantProd = (items, prod) => {
-    const found = items?.find((i) => i.producto === prod);
+const cantProd = (items, prodId) => {
+    const found = items?.find((i) => i.producto?._id === prodId);
     return found ? found.cantidad : 0;
 };
 
@@ -43,20 +43,31 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
     if (listaParaTotal.length === 0) return (
         <p className="text-center py-8 text-sm text-slate-400">Sin ventas para este dia.</p>
     );
-
-    // 1. Obtener productos únicos del día para las columnas dinámicas
-    const productosBaseConfig = ["Bidon 20L", "Bidon 12L", "Soda"];
-    const productosVendidos = new Set();
     
-    listaParaTotal.forEach(v => {
-        v.items?.forEach(i => productosVendidos.add(i.producto));
-    });
+    const productosUnicos = useMemo(() => {
+        const productosMap = new Map();
+        listaParaTotal.forEach(v => {
+            v.items?.forEach(i => {
+                if (i.producto && typeof i.producto === 'string') {
+                    const normalizedKey = i.producto.trim().toLowerCase().replace('bidón', 'bidon');
+                    if (!productosMap.has(normalizedKey)) {
+                        productosMap.set(normalizedKey, i.producto);
+                    }
+                }
+            });
+        });
+        return Array.from(productosMap.values()).sort();
+    }, [listaParaTotal]);
 
-    // Merge: Mantener los base primero, luego los nuevos que se hayan vendido
-    const colsDinamicas = [
-        ...productosBaseConfig,
-        ...Array.from(productosVendidos).filter(p => !productosBaseConfig.includes(p))
-    ];
+    const cantProdNormalizado = (items, prodNombre) => {
+        const normalizedProd = prodNombre.trim().toLowerCase().replace('bidón', 'bidon');
+        const itemEncontrado = items?.find(i => {
+            if (!i.producto || typeof i.producto !== 'string') return false;
+            const itemNormalized = i.producto.trim().toLowerCase().replace('bidón', 'bidon');
+            return itemNormalized === normalizedProd;
+        });
+        return itemEncontrado ? itemEncontrado.cantidad : 0;
+    };
 
     const totalDia  = listaParaTotal.reduce((acc, v) => acc + v.total, 0);
     const totalEfectivo = listaParaTotal
@@ -74,7 +85,7 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                 <thead>
                     <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
                         <th className="text-left px-4 py-3 rounded-tl-xl font-semibold">Cliente</th>
-                        {colsDinamicas.map(prod => (
+                        {productosUnicos.map(prod => (
                             <th key={prod} className="text-center px-2 py-3 font-semibold">
                                 {prod.replace("Bidon ", "")}
                             </th>
@@ -104,9 +115,9 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                                         <p className="text-xs text-slate-400 mt-0.5">{v.cliente.direccion}</p>
                                     )}
                                 </td>
-                                {colsDinamicas.map(prod => (
+                                {productosUnicos.map(prod => (
                                     <td key={prod} className="text-center px-2 py-3 font-bold text-slate-700">
-                                        {cantProd(v.items, prod) || <span className="text-slate-300">—</span>}
+                                        {cantProdNormalizado(v.items, prod) || <span className="text-slate-300">—</span>}
                                     </td>
                                 ))}
                                 <td className="text-right px-3 py-3 font-bold text-slate-800">
@@ -146,9 +157,9 @@ const TablaVentas = ({ ventas, ventasTotales }) => {
                             TOTAL DIA
                             <span className="ml-2 text-xs font-normal text-slate-500">({listaParaTotal.length} ventas)</span>
                         </td>
-                        {colsDinamicas.map(prod => (
+                        {productosUnicos.map(prod => (
                             <td key={prod} className="text-center px-2 py-3">
-                                {listaParaTotal.reduce((acc, v) => acc + cantProd(v.items, prod), 0) || "—"}
+                                {listaParaTotal.reduce((acc, v) => acc + cantProdNormalizado(v.items, prod), 0) || "—"}
                             </td>
                         ))}
                         <td className="text-right px-3 py-3 text-blue-700">{formatPeso(totalDia)}</td>
