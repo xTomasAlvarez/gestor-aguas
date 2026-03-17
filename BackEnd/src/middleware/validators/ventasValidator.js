@@ -14,6 +14,38 @@ const manejarErroresValidacion = (req, res, next) => {
     next();
 };
 
+/**
+ * Helper function to get end of today in UTC
+ * Returns the last moment of today (23:59:59.999 UTC)
+ */
+const getEndOfTodayUTC = () => {
+    const now = new Date();
+    const endOfDay = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        23, 59, 59, 999
+    ));
+    return endOfDay;
+};
+
+/**
+ * Middleware to validate that fecha is not in the future
+ */
+const validarFechaNoFutura = (req, res, next) => {
+    if (req.body.fecha) {
+        const fechaIngresada = new Date(req.body.fecha);
+        const endOfTodayUTC = getEndOfTodayUTC();
+        
+        if (fechaIngresada > endOfTodayUTC) {
+            return res.status(400).json({
+                error: "Error: No podés registrar un pago con una fecha futura. Revisá el calendario."
+            });
+        }
+    }
+    next();
+};
+
 export const validarCrearVenta = [
     body("cliente").isMongoId().withMessage("Debe ser un MongoId válido"),
     body("metodo_pago").isIn(["efectivo", "transferencia", "fiado"]).withMessage("Método de pago inválido"),
@@ -43,6 +75,7 @@ export const validarActualizarVenta = [
 ];
 
 export const validarRegistrarCobranza = [
+    validarFechaNoFutura,
     body("clienteId").isMongoId().withMessage("Debe ser un MongoId válido"),
     body("ticketId").isMongoId().withMessage("Debe ser un MongoId válido"),
     body("montoAbonado").optional().isFloat({ min: 0 }).withMessage("Debe ser número mayor o igual a 0"),
