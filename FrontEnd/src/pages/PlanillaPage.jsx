@@ -175,7 +175,7 @@ const TablaGastos = ({ gastos }) => {
     const total = gastos.reduce((acc, g) => acc + g.monto, 0);
     return (
         <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gastos del dia</h3>
+            <h3 className="text-sm font-bold text-slate-800 mb-4">Gastos del dia</h3>
             {gastos.length === 0 ? (
                 <p className="text-sm text-slate-400 py-4 text-center">Sin gastos.</p>
             ) : (
@@ -211,8 +211,8 @@ const TablaLlenados = ({ llenados }) => {
     const costoTotal = llenados.reduce((acc, l) => acc + (l.costo_total || 0), 0);
 
     return (
-        <div className="mt-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Llenados del dia</h3>
+        <div>
+            <h3 className="text-sm font-bold text-slate-800 mb-4">Llenados del dia</h3>
             {llenados.length === 0 ? (
                 <p className="text-sm text-slate-400 py-4 text-center">Sin llenados.</p>
             ) : (
@@ -232,8 +232,8 @@ const TablaLlenados = ({ llenados }) => {
                         </div>
                     ))}
                     {/* Acumulado */}
-                    <div className="mt-2 pt-2 border-t-2 border-slate-200">
-                        <p className="text-xs font-bold text-slate-500 mb-1">Acumulado del dia:</p>
+                    <div className="mt-3 pt-3 border-t-2 border-slate-200">
+                        <p className="text-xs font-bold text-slate-500 mb-2">Acumulado del dia:</p>
                         <div className="flex flex-wrap gap-2">
                             {Object.entries(acumulado).map(([prod, cant]) => (
                                 <span key={prod} className="text-sm font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">
@@ -242,7 +242,7 @@ const TablaLlenados = ({ llenados }) => {
                             ))}
                         </div>
                         {costoTotal > 0 && (
-                            <p className="text-xs text-slate-500 mt-1.5">Costo total llenados: <span className="font-semibold">{formatPeso(costoTotal)}</span></p>
+                            <p className="text-xs text-slate-500 mt-2">Costo total llenados: <span className="font-semibold">{formatPeso(costoTotal)}</span></p>
                         )}
                     </div>
                 </>
@@ -254,8 +254,8 @@ const TablaLlenados = ({ llenados }) => {
 // ── SECCIÓN 2 Centro: Cobranzas de Fiados Anteriores ─────────────────────
 const TablaCobranzas = ({ cobranzas }) => {
     return (
-        <div className="mt-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Cobranzas Extra (Fiados anteriores)</h3>
+        <div>
+            <h3 className="text-sm font-bold text-slate-800 mb-4">Cobranzas Extra (Fiados anteriores)</h3>
             {cobranzas.length === 0 ? (
                 <p className="text-sm text-slate-400 py-4 text-center">No se registraron cobros de deudas anteriores en este día.</p>
             ) : (
@@ -308,7 +308,7 @@ const ArqueoCaja = ({ ventas, gastos, cobranzas }) => {
     );
 
     return (
-        <div className="bg-slate-900 rounded-2xl p-6 text-white h-full flex flex-col">
+        <div className="bg-slate-900 rounded-2xl p-6 text-white flex flex-col min-h-[500px]">
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-5">Arqueo de caja</h3>
 
             {/* Ingresos */}
@@ -511,16 +511,24 @@ const PlanillaPage = () => {
                     </div>
 
                     {/* ── SECCIÓN 2: Paneles inferiores ────────────────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
                         {/* Izquierda: Gastos + Llenados + Cobranzas Extra */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-5">
-                            <TablaGastos  gastos={gastosDia} />
-                            <TablaLlenados llenados={llenadosDia} />
-                            <TablaCobranzas cobranzas={cobranzasDia} />
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-200">
+                            <div className="px-6 py-6">
+                                <TablaGastos  gastos={gastosDia} />
+                            </div>
+                            <div className="px-6 py-6">
+                                <TablaLlenados llenados={llenadosDia} />
+                            </div>
+                            <div className="px-6 py-6">
+                                <TablaCobranzas cobranzas={cobranzasDia} />
+                            </div>
                         </div>
 
                         {/* Derecha: Arqueo de caja */}
-                        <ArqueoCaja ventas={ventasDia} gastos={gastosDia} cobranzas={cobranzasDia} />
+                        <div className="lg:sticky lg:top-8">
+                            <ArqueoCaja ventas={ventasDia} gastos={gastosDia} cobranzas={cobranzasDia} />
+                        </div>
                     </div>
                 </div>
             )}
