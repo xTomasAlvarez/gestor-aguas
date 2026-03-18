@@ -13,12 +13,30 @@ export const registrar = async (req, res) => {
 // ── POST /api/auth/login ───────────────────────────────────────────────────
 export const login = async (req, res) => {
     try {
-        const resultado = await AuthService.login(req.body);
-        res.json(resultado);
+        const { token, usuario } = await AuthService.login(req.body);
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 12 * 60 * 60 * 1000, // 12 horas
+            path: "/",
+        });
+
+        res.json({ usuario });
     } catch (error) {
         res.status(error.status || 500).json({ message: error.message });
     }
 };
+
+// ── POST /api/auth/logout ──────────────────────────────────────────────────
+export const logout = (req, res) => {
+    res.cookie("token", "", {
+        httpOnly: true,
+        expires: new Date(0),
+        path: "/",
+    });
+    res.status(200).json({ message: "Sesión cerrada correctamente." });
 
 // ── GET /api/auth/me ───────────────────────────────────────────────────────
 // Endpoint de validación de sesión. El AuthContext de React lo consume
