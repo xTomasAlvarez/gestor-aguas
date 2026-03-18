@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 // ── Importaciones internas ─────────────────────────────────────────────────
 import authRoutes    from "./src/routes/authRoutes.js";
@@ -61,6 +61,7 @@ if (process.env.NODE_ENV === "production") {
 // ── Middlewares globales de Ciberseguridad ──────────────────────────────────
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
     const sanitize = (obj) => {

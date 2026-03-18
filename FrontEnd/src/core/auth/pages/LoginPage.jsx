@@ -28,7 +28,7 @@ const LoginPage = () => {
         try {
             const { data } = await loginService(form.email, form.password);
             toast.success("Bienvenido, " + data.usuario.nombre, { id: tid });
-            login(data);
+            login(data.usuario); // Ahora solo pasamos el objeto usuario
             navigate("/clientes", { replace: true });
         } catch (err) {
             toast.error(err.response?.data?.message || "Error al iniciar sesion.", { id: tid });

@@ -1,62 +1,68 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api, { setLogoutFn } from "@/core/http/api";
+import { logoutService } from "@/core/auth/services/authService";
 
 const AuthContext = createContext(null);
 
-// Lee el usuario guardado en localStorage de forma segura
-const leerUsuario = () => {
-    try { return JSON.parse(localStorage.getItem("usuario")); }
-    catch { return null; }
-};
-
 export const AuthProvider = ({ children }) => {
-    const [usuario, setUsuario] = useState(leerUsuario);
-    const [cargandoAuth, setCargandoAuth] = useState(true); // Bloquea la app hasta validar el token
+    const [usuario, setUsuario] = useState(null);
+    const [cargandoAuth, setCargandoAuth] = useState(true); // Bloquea la app hasta validar la sesión
 
-    const login = useCallback(({ token, usuario }) => {
-        localStorage.setItem("token",   token);
-        localStorage.setItem("usuario", JSON.stringify(usuario));
+    const login = useCallback((usuario) => {
         setUsuario(usuario);
     }, []);
 
-    const logout = useCallback(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
-        setUsuario(null);
+    const logout = useCallback(async () => {
+        if (usuario) { // Solo intentar desloguear si hay un usuario
+            try {
+                await logoutService();
+            } catch (error) {
+                console.error("Fallo al intentar cerrar sesión en el backend:", error);
+            } finally {
+                setUsuario(null);
+            }
+        }
+    }, [usuario]);
+
+    // Inyecta una versión estable del `logout` en el interceptor de Axios
+    useEffect(() => {
+        const stableLogout = async () => {
+            try {
+                await logoutService();
+            } catch (error) {
+                 console.error("Fallo al intentar cerrar sesión en el backend (interceptor):", error);
+            } finally {
+                setUsuario(null);
+            }
+        };
+        setLogoutFn(() => stableLogout);
+        return () => setLogoutFn(null);
     }, []);
 
-    // Registra el logout en el interceptor de Axios para manejar expiración de token
-    useEffect(() => {
-        setLogoutFn(logout);
-        return () => setLogoutFn(null);
-    }, [logout]);
 
-    // Función que verifica si el JWT local sigue siendo válido en el Backend
+    // Verifica si hay una sesión activa en el Backend al cargar la app
     useEffect(() => {
         let mounted = true;
         const verificarSesionBackend = async () => {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                if (mounted) setCargandoAuth(false);
-                return;
-            }
             try {
                 const { data } = await api.get("/auth/me");
                 if (mounted) {
                     setUsuario(data.usuario);
-                    localStorage.setItem("usuario", JSON.stringify(data.usuario));
                 }
             } catch (err) {
-                console.warn("Token expirado o inválido. Cerrando sesión de seguridad.", err);
-                logout(); // Si responde 401 el interceptor limpia, pero por las dudas
+                if (mounted) {
+                    setUsuario(null);
+                }
             } finally {
-                if (mounted) setCargandoAuth(false);
+                if (mounted) {
+                    setCargandoAuth(false);
+                }
             }
         };
 
         verificarSesionBackend();
         return () => { mounted = false; };
-    }, [logout]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{ usuario, cargandoAuth, login, logout }}>
@@ -67,3 +73,4 @@ export const AuthProvider = ({ children }) => {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
+

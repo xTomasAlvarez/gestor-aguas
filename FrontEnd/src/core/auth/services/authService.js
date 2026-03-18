@@ -5,6 +5,11 @@ export const loginService = (email, password) => {
     return api.post("/auth/login", { email, password });
 };
 
+// POST /api/auth/logout
+export const logoutService = () => {
+    return api.post("/auth/logout");
+};
+
 // POST /api/auth/registrar
 // Caso A (empleado): { nombre, email, password, inviteCode }
 // Caso B (admin):    { nombre, email, password, nombreEmpresa, masterCode }
