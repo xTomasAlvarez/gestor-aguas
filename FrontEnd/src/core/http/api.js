@@ -1,13 +1,9 @@
 import axios from "axios";
 import toast  from "react-hot-toast";
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "http://localhost:3005/api" });
-
-// ── Interceptor de REQUEST: adjunta el token JWT ──────────────────────────
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:3005/api",
+    withCredentials: true, // ¡CRÍTICO! Habilita el envío de cookies
 });
 
 // ── Interceptor de RESPONSE: si el token expiró, limpia la sesión ─────────
@@ -29,14 +25,12 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // Token expirado → limpiar sesión y volver al login
+        // Token expirado o sesión inválida → desloguear
         if (status === 401) {
-            const tieneToken = !!localStorage.getItem("token");
-            if (tieneToken) {
-                localStorage.removeItem("token");
-                localStorage.removeItem("usuario");
-                if (_logoutFn) _logoutFn();
-                toast.error("Tu sesion ha expirado. Por favor, ingresa de nuevo.", { duration: 5000 });
+            // Solo actuar si el usuario *creía* que estaba logueado
+            if (_logoutFn) {
+                _logoutFn();
+                toast.error("Tu sesión ha expirado. Por favor, ingresa de nuevo.", { duration: 5000 });
                 if (window.location.pathname !== "/login") {
                     window.location.href = "/login";
                 }

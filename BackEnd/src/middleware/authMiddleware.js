@@ -7,20 +7,29 @@ import Usuario from "../models/Usuario.js";
  */
 export const proteger = async (req, res, next) => {
     try {
-        const auth = req.headers.authorization;
-        if (!auth?.startsWith("Bearer "))
+        const token = req.cookies.token;
+        if (!token) {
             return res.status(401).json({ message: "No autorizado. Token requerido." });
+        }
 
-        const token   = auth.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         req.usuario = await Usuario.findById(decoded.id).select("-password");
-        if (!req.usuario)
+        if (!req.usuario) {
             return res.status(401).json({ message: "Usuario no encontrado." });
+        }
 
         next();
-    } catch {
-        res.status(401).json({ message: "Token invalido o expirado." });
+    } catch (error) {
+        // Si hay un error (token inválido, expirado, etc.), limpiamos la cookie
+        if (req.cookies.token) {
+            res.cookie("token", "", {
+                httpOnly: true,
+                expires: new Date(0),
+                path: "/",
+            });
+        }
+        res.status(401).json({ message: "Token inválido o expirado." });
     }
 };
 
