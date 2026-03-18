@@ -1,45 +1,81 @@
-# ⚙️ README_TECNICO.md - H2APP (Core Architecture)
+# ⚙️ README Técnico - H2APP
 
-Este documento detalla la estructura lógica profunda de la aplicación de Logística de Reparto (Stack: `MERN`). Está destinado a futuros ingenieros de software, DevOps o desarrolladores del núcleo del producto.
+Este documento detalla la arquitectura, los principios de diseño y las convenciones técnicas del proyecto H2APP. Está destinado a ingenieros de software, DevOps y futuros contribuidores al núcleo del producto.
 
-## 🏗️ 1. Arquitectura Multi-Tenant (El Pilar Principal)
-La plataforma no es para un solo negocio; es un **SaaS B2B Multi-empresa (Multi-Tenant)**. 
-- **Aislamiento de Datos por Documento:** Todos los esquemas sensibles de MongoDB (`Cliente.js`, `Venta.js`, `Gastos.js`, `Inventario.js`) inyectan un ObjectId mandatorio llamado `businessId`.
-- **Inyección Transparente Backend:** Nunca confiamos en el `businessId` enviado por el frontend. El Token JWT del usuario ya codifica su `businessId` nativo. El middleware `verificarToken.js` parsea esto y se expone como un helper constante `biz(req)` en todos los controladores. Cada single query a Mongo de la plataforma empieza con `{ $match: { businessId: biz(req) } }`.
-- **Índices Aislados:** Si un tenant crea un cliente "Juan Pérez", y otro distinto quiere crear "Juan Pérez", es perfectamente legal. Los índices de `unique` de Mongo (como el Teléfono en clientes) ahora incluyen `businessId` para que los checks de unicidad actúen en burbuja (`{ businessId: 1, telefono: 1 }`).
+## 1. Filosofía y Principios de Diseño
 
-## 🔐 2. Seguridad y Niveles de Acceso (RBAC)
-Existen tres Roles duros, y la estructura jerárquica va en descenso: `SuperAdmin -> Admin -> Empleado`.
+-   **Arquitectura Multi-Tenant:** El sistema está diseñado como un SaaS B2B. El aislamiento de datos es el pilar fundamental y se logra a nivel de documento en MongoDB mediante un `businessId` obligatorio.
+-   **Seguridad por Defecto:** Las políticas de seguridad no son opcionales. Se aplican de forma global a través de middlewares y validaciones estrictas en el backend.
+-   **Mobile-First:** La interfaz de usuario se diseña y construye priorizando la experiencia en dispositivos móviles, garantizando usabilidad y rendimiento en el campo.
+-   **Screaming Architecture (Frontend):** La estructura del código del frontend está organizada por características (`features`), no por tipos de archivo, haciendo la base del código más intuitiva y escalable.
 
-- **Master Admin Code (`MASTER_ADMIN_CODE`):** Requisito inquebrantable en `.env`. Para crear un `Admin` que será dueño de una nueva empresa (`businessId` naciente), en la ruta de registro se debe proveer el MASTER CODE secreto. Previene inyecciones masivas anónimas de bases de datos de nuevos tenants fantasma.
-- **Códigos Dinámicos y Vínculo (`InviteCodes.js`):** ¿Cómo un Empleado llega a un `businessId` creado por un admin? El Admin hace spawn de un "Código de Invitación" temporal de 6 dígitos que se guarda en DB apuntando a su `businessId`. El empleado lo introduce al registrarse y hereda el `businessId` como Tenant.
-- **"The Kill Switch" y Suspensión Global:** Si una franquicia no abona su subscripción del Software, el `SuperAdmin` (tú, desarrollador) cambia el flag global de la empresa (`Activo: false` en BD o vía su Panel). El Middleware genérico detecta este boolean al momento de decodificar el JWT y desaloja toda petición devolviendo Status 403, apagando la UI instantáneamente para el dueño y sus choferes.
+## 2. Arquitectura del Backend (`/BackEnd`)
 
-## 🎨 3. White Label y "Onboarding" Dinámico
-La marca comercial de cada Tenant es plástica.
-- **`ConfigParams.js` (MDB):** Al nacer un tenant, su config incluye nombre, logo string, y catálogo particular JSON.
-- **Wizard Interrupter:** Si un Admin acaba de crear su cuenta, el Frontend interroga su `config`. Si detecta un onboarding vacío, una ruta interceptora modal (`OnboardingWizard.jsx`) oscurece la app y hace que configure los precios antes de pasar. Esto inyecta sus productos al esquema maestro de Venta de su Tenant.
+El backend está construido sobre Node.js y Express 5, siguiendo un patrón RESTful modular.
 
-## 💰 4. Lógica Financiera Estricta - Transacciones en Calle
-- **Abonó vs Total:** El sistema de "Fiado" no es un módulo extra, es inercial. En `Venta.js`, si `monto_pagado` < `total`, automáticamente la deuda queda viva. 
-- **Deuda Viva Dinámica:** La "Deuda de un Cliente" NUNCA es guardada fijamente en el documento del cliente (fomenta data races y desincronización). En cambio, se calcula en tiempo de vuelo mediante Aggregation Pipelines (`statsController.js`), sumando todas las diferencias entre `total` y `monto_pagado` de las operaciones asociadas a su `_id`.
+#### El Núcleo: Sistema Multi-Tenant
+-   **Aislamiento de Datos:** Cada documento en colecciones críticas (ventas, clientes, etc.) contiene una referencia `businessId`.
+-   **Inyección Segura de Contexto:** El `businessId` se extrae del token JWT del usuario autenticado en un middleware (`verificarToken.js`) y se inyecta en cada consulta a la base de datos. El frontend nunca envía el `businessId` directamente.
+-   **Índices Únicos por Tenant:** Las restricciones de unicidad en la base de datos (ej. teléfono del cliente) son compuestas y siempre incluyen el `businessId`, permitiendo que diferentes empresas usen los mismos datos sin colisiones.
 
-## 📦 5. Activos e Inventario Físico (CAPEX)
-El seguimiento de "Dispensers" y equipamiento prestado (comodatos) fue desarrollado para que audite de forma doble.
-1. **Polo en la DB - `Inventario.js`:** Determina el total general adquirido, coste unitario y lo que queda en 'Depósito'.
-2. **Registro Descentralizado - `Cliente.js`:** Cada cliente suma `dispensersAsignados`.
-- La **Valorización y Auditoría:** La API `obtenerDashboardInventario` junta las puntas. Cuenta el número global sumando cuántos clientes tienen flag `dispensersAsignados > 0`, y cruza ese volumen con el costo unitario (`costoReposicion`) para tasar económicamente a toda la red entera.
+#### Seguridad
+-   **Autenticación y Autorización (RBAC):**
+    -   Se utiliza JSON Web Tokens (JWT) para gestionar las sesiones.
+    -   Existen tres roles con una jerarquía estricta: `SuperAdmin` > `Admin` > `Empleado`.
+    -   El acceso a las rutas está protegido por middlewares que verifican tanto el token como el rol del usuario.
+-   **Protección de la API:**
+    -   **CORS Dinámico:** Restringe las peticiones a un `FRONTEND_URL` autorizado en producción.
+    -   **Rate Limiting:** Previene ataques de fuerza bruta y DDoS en endpoints críticos como el login (`express-rate-limit`).
+    -   **Sanitización de Entradas:** Un middleware personalizado elimina caracteres maliciosos (`$` y `.`) de las entradas para prevenir inyecciones NoSQL.
+    -   **Cabeceras de Seguridad:** Se utiliza `helmet` para proteger contra vulnerabilidades comunes como XSS y clickjacking.
 
-## 🖥 6. Arquitectura UX/UI - Modernizando React
-Toda la suite visual usa un approach estricto "Aqua-Industrial" y "Mobile-First":
-- **Tailwind `clx.js`:** Minimalismo. Uso de variables abstractas `sm`, `min-h-[44px]` (para touch rules en móvil real) y skeletons iterados para tapar tiempos de respuesta de mongoose.
-- **Layouts Desglosables:** `Navbar.jsx` tiene comportamiento Split en <= 768px: Bottom Bar (App estandar) limitada para los 6 operacionales duros, delegando la carga administrativa y secundaria a un Menú Hamburguesa en Dropdown modal (Top Bar) para no sofocar el UI.
-- Uso de **Recharts** (`Pie`, `AreaChart`) para dashboard inyectando Gradientes SVG nativos.
+## 3. Arquitectura del Frontend (`/FrontEnd`)
 
-## 🛡️ 7. Ciberseguridad y Blindaje de la API
-Para proteger el ecosistema de la Base de Datos y mitigar ataques automatizados, se integraron defensas absolutas a nivel del entry-point:
+El frontend es una Single Page Application (SPA) construida con React 19 y Vite.
 
-1. **Políticas de CORS Dinámicas:** El servidor evalúa inteligentemente el entorno. Permite el tráfico sin fricciones hacia Vite (`http://localhost:5173` o `127.0.0.1`) en modo desarrollo. Sin embargo, en Producción rechaza peticiones (Preflight Options y Normales) que no provengan exactamente de la firma estipulada en `process.env.FRONTEND_URL`, impidiendo que frontends no autorizados clonen la UI y usen nuestra API.
-2. **Protección contra Inyección NoSQL (Express 5 Compatibilidad):** Debido a que la API usa localmente Express 5, se descartó el uso de la dependencia `express-mongo-sanitize` (la cual genera un crash de `TypeError` al intentar reasignar los getters estrictos de `req.query`). En su lugar, rige un **middleware custom** (`sanitizeNoSQL.js`) ejecutado de forma global que recorre y muta recursivamente el payload por referencia, eliminando de raíz cualquier key dañina que inicie con `$` o `.`.
-3. **Mitigación Anti-DDoS y Fuerza Bruta:** Toda la app está arropada por el paquete `express-rate-limit`. El tráfico regular tiene un cap general de 100 peticiones cada 15 min por IP. Por otro lado, las rutas críticas (`/api/auth/login` y `/api/auth/registrar`) cuentan con un escudo híper estricto de apenas **5 intentos cada 15 minutos**, abortando matemáticamente los ataques de fuerza bruta.
-4. **Protección XSS y Configuración de Cabeceras:** Todo el request handling pasa a través de `helmet()`, despojando metadatos vulnerables (`X-Powered-By`) e implantando resguardos duros contra cross-site scripting (XSS), secuestro de Mime-types y ejecución de iframes falsos (Clickjacking).
+#### Estructura de Carpetas (Screaming Architecture)
+El directorio `src/` está organizado por funcionalidad de negocio:
+-   `src/features/auth`: Lógica de autenticación, vistas de login/registro.
+-   `src/features/sales`: Componentes y lógica para el registro de ventas.
+-   `src/features/dashboard`: Vistas y componentes del panel de administrador.
+-   `src/lib`: Clientes de API (Axios), helpers, etc.
+-   `src/components/ui`: Componentes de interfaz de usuario genéricos y reutilizables.
+-   `src/layouts`: Estructuras de página principales (ej. `AdminLayout`, `PublicLayout`).
+
+#### Manejo del Estado
+(Sección a completar. Ej: Se utiliza Zustand para el estado global de la sesión del usuario y el estado local de React (`useState`) para la gestión de formularios y componentes.)
+
+## 4. Guía de Instalación para Desarrollo
+
+### Requisitos Previos
+-   Node.js (v18 o superior)
+-   MongoDB (local o en un clúster de Atlas)
+
+### Backend (`/BackEnd`)
+1.  Navega al directorio: `cd BackEnd`
+2.  Instala las dependencias: `npm install`
+3.  Crea un archivo `.env` en la raíz de `/BackEnd` y configura las siguientes variables:
+    ```
+    MONGO_URI=your_mongodb_connection_string
+    JWT_SECRET=your_jwt_secret
+    FRONTEND_URL=http://localhost:5173
+    MASTER_ADMIN_CODE=your_super_secret_code
+    ```
+4.  Inicia el servidor: `npm run dev`
+
+### Frontend (`/FrontEnd`)
+1.  Navega al directorio: `cd FrontEnd`
+2.  Instala las dependencias: `npm install`
+3.  Crea un archivo `.env` en la raíz de `/FrontEnd` y configura la variable de la API:
+    ```
+    VITE_API_URL=http://localhost:5000/api
+    ```
+4.  Inicia la aplicación: `npm run dev`
+
+La aplicación estará disponible en `http://localhost:5173`.
+
+## 5. Convenciones y Guías de Estilo
+
+Todas las contribuciones de código deben adherirse a las reglas definidas en el siguiente documento. El incumplimiento de estas reglas puede causar que el hook `pre-commit` falle.
+
+➡️ **[Leer las Reglas de Código](./AGENTS.md)**
