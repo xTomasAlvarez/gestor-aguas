@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "@/core/auth/AuthContext";
+import useSessionStore from "@/lib/stores/sessionStore";
 import { useConfig } from "@/core/config/ConfigContext";
 import ConfirmModal from "./ConfirmModal";
 
@@ -89,7 +89,7 @@ const NAV_LINKS = [
 
 const Navbar = () => {
     const { pathname }        = useLocation();
-    const { usuario, logout } = useAuth();
+            const { user: usuario, logout } = useSessionStore();
     const { config }          = useConfig();
     const navigate            = useNavigate();
     const [menuAbierto, setMenuAbierto] = useState(false);
@@ -120,7 +120,10 @@ const Navbar = () => {
     const bottomNavLinks = navLinks.filter(l => bottomNavKeys.includes(l.to)).slice(0, 6);
     const drawerNavLinks = navLinks.filter(l => !bottomNavKeys.includes(l.to));
 
-    const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
+            const handleLogout = () => {
+        logout();
+        navigate("/login", { replace: true });
+    };
 
     return (
         <>
