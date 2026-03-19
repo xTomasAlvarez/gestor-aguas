@@ -5,6 +5,7 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 
 // ── Importaciones internas ─────────────────────────────────────────────────
 import authRoutes    from "./src/routes/authRoutes.js";
