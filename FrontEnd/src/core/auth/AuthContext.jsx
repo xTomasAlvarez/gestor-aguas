@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api, { setLogoutFn } from "@/core/http/api";
 import { logoutService } from "@/core/auth/services/authService";
+import useSessionStore from "@/lib/stores/sessionStore";
+
 
 const AuthContext = createContext(null);
 
@@ -42,6 +44,12 @@ export const AuthProvider = ({ children }) => {
 
     // Verifica si hay una sesión activa en el Backend al cargar la app
     useEffect(() => {
+        const { isAuthenticated } = useSessionStore.getState();
+        if (!isAuthenticated) {
+            setCargandoAuth(false);
+            return;
+        }
+
         let mounted = true;
         const verificarSesionBackend = async () => {
             try {

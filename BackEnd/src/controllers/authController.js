@@ -37,6 +37,7 @@ export const logout = (req, res) => {
         path: "/",
     });
     res.status(200).json({ message: "Sesión cerrada correctamente." });
+};
 
 // ── GET /api/auth/me ───────────────────────────────────────────────────────
 // Endpoint de validación de sesión. El AuthContext de React lo consume

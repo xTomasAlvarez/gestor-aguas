@@ -62,7 +62,8 @@ const user = new User({
 
     // 4. Assertions
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('token');
+    expect(response.headers['set-cookie']).toBeDefined();
+    expect(response.headers['set-cookie'][0]).toMatch(/token=/);
     expect(response.body.usuario.email).toBe('test@example.com');
   });
 });

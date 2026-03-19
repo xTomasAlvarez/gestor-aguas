@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginService } from "@/core/auth/services/authService";
-import { useAuth }      from "@/core/auth/AuthContext";
+import useSessionStore from "@/lib/stores/sessionStore";
+import { useAuth } from "@/core/auth/AuthContext";
 import toast            from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, Download } from "lucide-react";
 import useInstallPrompt from "@/shared/hooks/useInstallPrompt";
 import CanvasWaterTrail from "@/shared/components/CanvasWaterTrail";
+
+
 const LoginPage = () => {
-    const { login } = useAuth();
+    const { login: storeLogin } = useSessionStore();
+    const { login: contextLogin } = useAuth();
     const navigate  = useNavigate();
     const { canInstall, promptInstall } = useInstallPrompt();
 
@@ -28,7 +32,10 @@ const LoginPage = () => {
         try {
             const { data } = await loginService(form.email, form.password);
             toast.success("Bienvenido, " + data.usuario.nombre, { id: tid });
-            login(data.usuario); // Ahora solo pasamos el objeto usuario
+            
+            // Ya no pasamos data.token, ya que el backend usa cookies HttpOnly
+            storeLogin(null, data.usuario);
+            contextLogin(data.usuario);
             navigate("/clientes", { replace: true });
         } catch (err) {
             toast.error(err.response?.data?.message || "Error al iniciar sesion.", { id: tid });

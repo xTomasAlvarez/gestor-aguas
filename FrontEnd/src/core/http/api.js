@@ -26,7 +26,7 @@ api.interceptors.response.use(
         }
 
         // Token expirado o sesión inválida → desloguear
-        if (status === 401) {
+        if (status === 401 && error.config.url !== "/auth/logout") {
             // Solo actuar si el usuario *creía* que estaba logueado
             if (_logoutFn) {
                 _logoutFn();
