@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from "@/core/http/api";
+
 
 /**
  * @typedef {object} SessionState
@@ -26,8 +28,14 @@ const useSessionStore = create(
         // Para este caso, localStorage es suficiente para demostrar el concepto.
         set({ token, user, isAuthenticated: true });
       },
-      logout: () => {
-        set({ token: null, user: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error("Error al cerrar sesión en el servidor:", error);
+        } finally {
+            set({ token: null, user: null, isAuthenticated: false });
+        }
       },
     }),
     {
