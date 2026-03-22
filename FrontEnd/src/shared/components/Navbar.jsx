@@ -104,8 +104,8 @@ const Navbar = () => {
         { to: "/planilla",      label: "Planilla",    Icon: IconPlanilla  },
         { to: "/llenados",      label: "Llenados",    Icon: IconLlenados  },
         { to: "/gastos",        label: "Gastos",      Icon: IconGastos    },
-        { to: "/estadisticas",  label: "Stats",       Icon: IconStats     },
         ...(isAdmin ? [
+            { to: "/estadisticas", label: "Stats",      Icon: IconStats     },
             { to: "/inventario",   label: "Inventario",Icon: IconInventario },
             { to: "/broadcast",    label: "Difusion",  Icon: IconBroadcast },
             { to: "/configuracion", label: "Config",   Icon: IconConfig    },
