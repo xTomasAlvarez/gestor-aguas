@@ -27,7 +27,7 @@ export const validarActualizarConfig = [
         .isURL().withMessage("El logo debe ser una URL válida"),
 
     body("telefono")
-        .optional()
+        .optional({ checkFalsy: true })
         .trim()
         .isString().withMessage("El teléfono debe ser un texto")
         .isLength({ min: 6, max: 20 }).withMessage("El teléfono debe tener entre 6 y 20 caracteres"),
