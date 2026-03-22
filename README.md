@@ -8,21 +8,34 @@
 [![Versión](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/) 
 [![Licencia](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
-**H2APP** es una plataforma integral (Software as a Service) diseñada para digitalizar y optimizar la operación de empresas de reparto. Construida con un enfoque _Mobile-First_, facilita el trabajo ágil en la calle y otorga a los administradores un panel de control completo para la toma de decisiones.
+**H2APP** es una plataforma integral (Software as a Service) diseñada para digitalizar y optimizar la operación de empresas de reparto. Construida con un enfoque _Mobile-First_, erradica el uso de papel, libretas de deudores y planillas manuales, centralizando toda la logística y finanzas en la nube.
 
-## ✨ Características Principales
+🔴 **[VER DEMO EN VIVO](https://h2app-one.vercel.app)** 🔴
 
-- **Arquitectura Multi-Tenant:** Cada empresa opera en su propio ecosistema de datos aislado y seguro.
-- **Onboarding y White Labeling:** Configure su marca, catálogo y precios en minutos a través de un asistente inicial.
-- **Panel Financiero en Tiempo Real:** Visualice la "Caja Real" vs. la "Deuda Viva" y tome el control de sus finanzas.
-- **Gestión de Empleados y Activos:** Controle su equipo de repartidores y el inventario de dispensadores en comodato.
-- **Motor de Análisis de Deuda:** El sistema calcula y gestiona automáticamente los saldos pendientes de los clientes.
+---
 
-## 🛠️ Stack Tecnológico
+## 🚀 El Impacto en Producción
+Este sistema **opera activamente en un entorno real**. Actualmente, es utilizado a diario por un repartidor independiente en su ruta, logrando **eliminar el 100% del uso de papel** en su operación. La iteración continua basada en feedback directo de la calle resultó en una adopción exitosa y una lógica financiera sin discrepancias.
 
-- **Frontend:** React 19, Vite, Tailwind CSS, PWA
-- **Backend:** Node.js, Express 5, MongoDB, Mongoose
-- **Principios:** Arquitectura RESTful, Mobile-First, Multi-Tenant
+## ✨ Arquitectura Modular y Lógica de Negocio
+
+- 🔐 **Gestión de Roles (RBAC) y Seguridad:** Control de acceso estricto. El administrador tiene visibilidad total; el empleado solo accede a su ruta. Los empleados se unen mediante códigos de invitación únicos y pueden ser suspendidos en tiempo real por el administrador (Kill Switch).
+- 🚚 **Módulo de Ruta Diaria (Mobile-First):** Agilidad extrema para el repartidor. Registro de entregas, cobros (efectivo/transferencia) y fiados con interfaces de alto contraste para uso en movimiento.
+- 💰 **Cuentas Corrientes y Deudas:** Reemplaza la libreta de papel. Calcula automáticamente saldos históricos ("fiados"), gestiona entregas parciales y mantiene un historial inmutable.
+- 📊 **Dashboard Financiero:** Exclusivo para administradores. Contrasta en tiempo real la **Caja Real** (dinero a rendir deduciendo gastos operativos) vs. la **Deuda Viva** (capital en la calle).
+- 💧 **Módulo de Llenados:** Registro de recarga de mercadería (producción o compra mayorista) para costeo y control de márgenes.
+- 📦 **Control Patrimonial (Inventario):** Visión del capital total del negocio. Seguimiento del patrimonio completo: bidones, sifones y dispensadores (frío/calor), tanto en depósito como prestados (comodato).
+- 🏢 **Arquitectura Multi-Tenant:** Múltiples empresas operan simultáneamente con sus datos estricta y criptográficamente aislados.
+
+## 🛠️ Stack Tecnológico y Prácticas
+
+- **Frontend:** React 19 + Vite, Zustand (estado global), Tailwind CSS, Recharts. Empaquetado como **PWA** para instalación nativa.
+- **Backend:** Node.js, Express 5. Arquitectura RESTful en capas (Controllers, Services, Models).
+- **Base de Datos:** MongoDB + Mongoose (NoSQL) en MongoDB Atlas.
+- **Seguridad:** Autenticación con **Cookies HttpOnly** (mitigación XSS), Helmet.js, Rate Limiting y CORS dinámico.
+- **Infraestructura:** CI/CD con despliegues en Vercel (Front) y Render (Back).
+
+---
 
 ## 🚀 Comenzando
 
@@ -42,14 +55,14 @@ Para una instalación rápida en un entorno local:
     ```bash
     cd BackEnd
     npm install
-    # Crear y configurar .env
+    # Crear y configurar .env basado en .env.example
     npm run dev
     ```
 2.  **Frontend:**
     ```bash
     cd FrontEnd
     npm install
-    # Crear y configurar .env
+    # Crear y configurar .env basado en .env.example
     npm run dev
     ```
 
