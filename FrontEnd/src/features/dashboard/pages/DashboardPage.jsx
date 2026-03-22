@@ -114,7 +114,13 @@ const DashboardPage = () => {
     const rp = resumenPeriodo || {};
     
     // Preparar Data Inventory
-    const invData = inv?.items?.dispensers || { enCalle: 0, enDeposito: 0, valorizacion: 0 };
+    const invItems = inv?.items || {};
+    // Buscamos dinámicamente el item cuyo label (o key) contenga "dispenser"
+    const dispenserKey = Object.keys(invItems).find(k => 
+        k.toLowerCase().includes('dispenser') || 
+        invItems[k].label?.toLowerCase().includes('dispenser')
+    );
+    const invData = dispenserKey ? invItems[dispenserKey] : { enCalle: 0, enDeposito: 0, valorizacion: 0 };
     const valorizacionTotal = inv?.valorizacionTotal || 0;
 
     const donutAssetData = [
