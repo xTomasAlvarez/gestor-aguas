@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
     // Estado local aislado del Modal
     const [selectedTickets, setSelectedTickets] = useState([]);
-    const [montoAbonado, setMontoAbonado] = useState("");
+    const [pagosTabla, setPagosTabla] = useState([]);
     const [metodoPago, setMetodoPago] = useState("efectivo");
     const [envases, setEnvases] = useState({ bidones_20L: 0, bidones_12L: 0, sodas: 0 });
     const [enviando, setEnviando] = useState(false);
@@ -17,48 +17,63 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
     useEffect(() => {
         if (!opened) {
             setSelectedTickets([]);
-            setMontoAbonado("");
+            setPagosTabla([]);
             setMetodoPago("efectivo");
             setEnvases({ bidones_20L: 0, bidones_12L: 0, sodas: 0 });
         }
     }, [opened, clienteId]);
 
-    // Calcular el ticket seleccionado (por ahora solo soportamos un ticket a la vez)
-    const ticketActual = useMemo(() => {
-        if (selectedTickets.length === 0) return null;
-        return tickets.find(t => String(t?._id) === String(selectedTickets[0]));
+    // Obtener tickets seleccionados como objetos completos
+    const ticketsSeleccionados = useMemo(() => {
+        return tickets.filter(t => selectedTickets.includes(String(t?._id)));
     }, [tickets, selectedTickets]);
 
-    // Calcular límites del ticket seleccionado
-    const maxMonto = useMemo(() => {
-        if (!ticketActual) return 0;
-        return Math.max(0, (ticketActual?.total || 0) - (ticketActual?.monto_pagado || 0));
-    }, [ticketActual]);
+    // Calcular límites totales para múltiples tickets
+    const maxMontoTotal = useMemo(() => {
+        return ticketsSeleccionados.reduce((sum, ticket) => {
+            const deuda = Math.max(0, (ticket?.total || 0) - (ticket?.monto_pagado || 0));
+            return sum + deuda;
+        }, 0);
+    }, [ticketsSeleccionados]);
 
-    const maxEnvases = useMemo(() => {
-        const prestados = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
-        if (!ticketActual) return prestados;
+    // Calcular máximo de envases globales (suma de pendientes de todos los tickets)
+    const maxEnvasesGlobal = useMemo(() => {
+        const total = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
         
-        const itemsArr = Array.isArray(ticketActual?.items) ? ticketActual.items : [];
-        itemsArr.forEach(item => {
-            if (item?.producto === "Bidon 20L") prestados.bidones_20L += (item?.cantidad || 0);
-            if (item?.producto === "Bidon 12L") prestados.bidones_12L += (item?.cantidad || 0);
-            if (item?.producto === "Soda") prestados.sodas += (item?.cantidad || 0);
+        ticketsSeleccionados.forEach(ticket => {
+            const itemsArr = Array.isArray(ticket?.items) ? ticket.items : [];
+            const prestados = { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
+            
+            itemsArr.forEach(item => {
+                if (item?.producto === "Bidon 20L") prestados.bidones_20L += (item?.cantidad || 0);
+                if (item?.producto === "Bidon 12L") prestados.bidones_12L += (item?.cantidad || 0);
+                if (item?.producto === "Soda") prestados.sodas += (item?.cantidad || 0);
+            });
+            
+            const devueltos = ticket?.envases_devueltos || { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
+            
+            total.bidones_20L += Math.max(0, prestados.bidones_20L - (devueltos.bidones_20L || 0));
+            total.bidones_12L += Math.max(0, prestados.bidones_12L - (devueltos.bidones_12L || 0));
+            total.sodas += Math.max(0, prestados.sodas - (devueltos.sodas || 0));
         });
         
-        const devueltos = ticketActual?.envases_devueltos || { bidones_20L: 0, bidones_12L: 0, sodas: 0 };
-        return {
-            bidones_20L: Math.max(0, prestados.bidones_20L - (devueltos.bidones_20L || 0)),
-            bidones_12L: Math.max(0, prestados.bidones_12L - (devueltos.bidones_12L || 0)),
-            sodas: Math.max(0, prestados.sodas - (devueltos.sodas || 0))
-        };
-    }, [ticketActual]);
+        return total;
+    }, [ticketsSeleccionados]);
 
-    // Resetear monto y envases cuando cambia el ticket seleccionado
+    // Inicializar pagosTabla cuando los tickets seleccionados cambian
     useEffect(() => {
-        setMontoAbonado("");
+        const nuevosPagos = ticketsSeleccionados.map(ticket => ({
+            ticketId: String(ticket?._id),
+            monto: 0
+        }));
+        setPagosTabla(nuevosPagos);
         setEnvases({ bidones_20L: 0, bidones_12L: 0, sodas: 0 });
-    }, [selectedTickets]);
+    }, [ticketsSeleccionados]);
+
+    // Calcular suma total de pagos
+    const totalPagos = useMemo(() => {
+        return pagosTabla.reduce((sum, pago) => sum + (pago.monto || 0), 0);
+    }, [pagosTabla]);
 
     // Calcular total de deuda pendiente
     const totalDeuda = useMemo(() => {
@@ -70,52 +85,63 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
     }, [tickets]);
 
     const handleTicketToggle = (ticketId) => {
+        // Permitir múltiples selecciones, máximo 10 tickets
         setSelectedTickets(prev => {
-            // Por ahora solo permitimos seleccionar un ticket a la vez
             if (prev.includes(ticketId)) {
+                // Deseleccionar
                 return prev.filter(id => id !== ticketId);
             } else {
-                return [ticketId];
+                // Seleccionar (si no excedemos máximo de 10)
+                if (prev.length >= 10) {
+                    toast.error("Máximo 10 tickets por transacción.");
+                    return prev;
+                }
+                return [...prev, ticketId];
             }
         });
     };
 
     const handleConfirmar = async () => {
         if (selectedTickets.length === 0) {
-            return toast.error("Por favor selecciona un ticket para saldar.");
+            return toast.error("Por favor selecciona al menos un ticket para saldar.");
         }
 
-        const abonoNumeric = Number(montoAbonado) || 0;
-        if (abonoNumeric === 0 && envases.bidones_20L === 0 && envases.bidones_12L === 0 && envases.sodas === 0) {
+        // Calcular suma total de pagos
+        const totalPagos = pagosTabla.reduce((sum, pago) => sum + (pago.monto || 0), 0);
+        
+        // Validar: debe haber al menos un pago o devolución de envases
+        if (totalPagos === 0 && envases.bidones_20L === 0 && envases.bidones_12L === 0 && envases.sodas === 0) {
             return toast.error("Debes ingresar un monto o devolver al menos un envase.");
         }
 
+        // Validar: suma de pagos no puede exceder deuda total
+        if (totalPagos > maxMontoTotal) {
+            return toast.error(`La suma de pagos ($${totalPagos}) excede la deuda total ($${maxMontoTotal}).`);
+        }
+
+        // Construir payload con nueva API (múltiple)
         const payload = {
             clienteId,
-            ticketId: selectedTickets[0],
-            montoAbonado: abonoNumeric,
+            ticketIds: selectedTickets,
+            pagos: pagosTabla,
             envasesDevueltos: envases,
             metodoPago
         };
 
-        console.log("1. Iniciando petición al backend desde Modal...", payload);
         setEnviando(true);
 
         try {
             const response = await registrarCobranza(payload);
-            console.log("2. Respuesta recibida:", response);
-            toast.success("Liquidación registrada correctamente.");
+            toast.success("Liquidación múltiple registrada correctamente.");
             
             // Cerrar modal
             onClose();
             
             // Ejecutar callback de éxito
             if (onExito) {
-                console.log("-> Ejecutando callback onExito()");
                 onExito();
             }
         } catch (error) {
-            console.error("Error capturado en registrarCobranza:", error);
             const errorMsg = error.response?.data?.message || "Error crítico al procesar la cobranza.";
             toast.error(errorMsg);
             alert(`Fallo en el servidor: ${errorMsg}`);
@@ -199,29 +225,91 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
                     </Stack>
                 </div>
 
-                {/* Configuración de pago - solo si hay un ticket seleccionado */}
-                {ticketActual && (
+                {/* Configuración de pago - solo si hay tickets seleccionados */}
+                {ticketsSeleccionados.length > 0 && (
                     <Paper withBorder radius="md" p="md" bg="slate.50">
                         <Stack gap="sm">
                             <Text size="sm" fw={700} c="slate.8">
-                                Liquidación Parcial / Total
+                                Distribución de Pagos ({selectedTickets.length} ticket{selectedTickets.length !== 1 ? 's' : ''})
                             </Text>
 
-                            <NumberInput
-                                label="Monto a Pagar ($)"
-                                description={`Deuda restante monetaria: ${formatPeso(maxMonto)}`}
-                                placeholder="0"
-                                value={montoAbonado}
-                                onChange={setMontoAbonado}
-                                min={0}
-                                max={maxMonto}
-                                hideControls
-                                size="md"
-                                onFocus={(e) => e.target.select()}
-                                inputMode="numeric"
-                            />
+                            {/* Tabla de distribución manual */}
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid #dee2e6' }}>
+                                            <th style={{ textAlign: 'left', padding: '8px', fontSize: '12px', fontWeight: '600' }}>Fecha</th>
+                                            <th style={{ textAlign: 'left', padding: '8px', fontSize: '12px', fontWeight: '600' }}>Items</th>
+                                            <th style={{ textAlign: 'right', padding: '8px', fontSize: '12px', fontWeight: '600' }}>Deuda</th>
+                                            <th style={{ textAlign: 'right', padding: '8px', fontSize: '12px', fontWeight: '600' }}>Monto a Pagar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {ticketsSeleccionados.map((ticket, idx) => {
+                                            const deudaRestante = Math.max(0, (ticket?.total || 0) - (ticket?.monto_pagado || 0));
+                                            const itemsArr = Array.isArray(ticket?.items) ? ticket.items : [];
+                                            const strItems = itemsArr.length > 0
+                                                ? itemsArr.map(i => `${Number(i?.cantidad || 0)}x ${String(i?.producto || "")}`).join(", ")
+                                                : "Cobranza";
+                                            const montoActual = pagosTabla[idx]?.monto || 0;
+                                            const estaExcedido = montoActual > deudaRestante;
 
-                            {montoAbonado !== "" && Number(montoAbonado) > 0 && (
+                                            return (
+                                                <tr key={ticket._id} style={{ borderBottom: '1px solid #e9ecef' }}>
+                                                    <td style={{ padding: '8px', fontSize: '12px' }}>
+                                                        {formatFecha(ticket?.fecha)}
+                                                    </td>
+                                                    <td style={{ padding: '8px', fontSize: '12px', color: '#495057' }}>
+                                                        {strItems}
+                                                    </td>
+                                                    <td style={{ padding: '8px', fontSize: '12px', textAlign: 'right', fontWeight: '600' }}>
+                                                        {formatPeso(deudaRestante)}
+                                                    </td>
+                                                    <td style={{ padding: '8px', textAlign: 'right' }}>
+                                                        <NumberInput
+                                                            value={montoActual}
+                                                            onChange={(val) => {
+                                                                const newPagos = [...pagosTabla];
+                                                                newPagos[idx] = { ...newPagos[idx], monto: Number(val) || 0 };
+                                                                setPagosTabla(newPagos);
+                                                            }}
+                                                            min={0}
+                                                            max={deudaRestante}
+                                                            hideControls
+                                                            size="sm"
+                                                            placeholder="0"
+                                                            styles={{
+                                                                input: {
+                                                                    borderColor: estaExcedido ? '#fa5252' : undefined,
+                                                                    backgroundColor: estaExcedido ? '#ffe0e0' : undefined,
+                                                                    fontSize: '12px',
+                                                                    padding: '6px'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Resumen de pagos */}
+                            <Paper bg={totalPagos > maxMontoTotal ? "red.0" : "green.0"} p="xs" radius="md">
+                                <Group justify="space-between">
+                                    <Text size="sm" fw={600}>
+                                        Total a Pagar:
+                                    </Text>
+                                    <Text size="sm" fw={700} c={totalPagos > maxMontoTotal ? "red.7" : "green.7"}>
+                                        {formatPeso(totalPagos)}
+                                        {totalPagos > maxMontoTotal && ` (Excede ${formatPeso(totalPagos - maxMontoTotal)})`}
+                                    </Text>
+                                </Group>
+                            </Paper>
+
+                            {/* Método de pago - solo si hay monto > 0 */}
+                            {totalPagos > 0 && (
                                 <NativeSelect
                                     label="Método de Pago"
                                     required
@@ -234,37 +322,37 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
                                 />
                             )}
 
-                            {/* Contadores de envases */}
-                            {maxEnvases.bidones_20L > 0 && (
+                            {/* Devolución de envases - global para todos los tickets (FIFO en backend) */}
+                            {maxEnvasesGlobal.bidones_20L > 0 && (
                                 <CounterInput
                                     label="Devolver Bidones 20L"
-                                    description={`Pendientes de devolver en este ticket: ${maxEnvases.bidones_20L}`}
+                                    description={`Pendientes de devolver (de todos los tickets): ${maxEnvasesGlobal.bidones_20L}`}
                                     value={envases.bidones_20L}
                                     onChange={(val) => setEnvases(p => ({ ...p, bidones_20L: val }))}
                                     min={0}
-                                    max={maxEnvases.bidones_20L}
+                                    max={maxEnvasesGlobal.bidones_20L}
                                 />
                             )}
 
-                            {maxEnvases.bidones_12L > 0 && (
+                            {maxEnvasesGlobal.bidones_12L > 0 && (
                                 <CounterInput
                                     label="Devolver Bidones 12L"
-                                    description={`Pendientes de devolver en este ticket: ${maxEnvases.bidones_12L}`}
+                                    description={`Pendientes de devolver (de todos los tickets): ${maxEnvasesGlobal.bidones_12L}`}
                                     value={envases.bidones_12L}
                                     onChange={(val) => setEnvases(p => ({ ...p, bidones_12L: val }))}
                                     min={0}
-                                    max={maxEnvases.bidones_12L}
+                                    max={maxEnvasesGlobal.bidones_12L}
                                 />
                             )}
 
-                            {maxEnvases.sodas > 0 && (
+                            {maxEnvasesGlobal.sodas > 0 && (
                                 <CounterInput
                                     label="Devolver Sodas"
-                                    description={`Pendientes de devolver en este ticket: ${maxEnvases.sodas}`}
+                                    description={`Pendientes de devolver (de todos los tickets): ${maxEnvasesGlobal.sodas}`}
                                     value={envases.sodas}
                                     onChange={(val) => setEnvases(p => ({ ...p, sodas: val }))}
                                     min={0}
-                                    max={maxEnvases.sodas}
+                                    max={maxEnvasesGlobal.sodas}
                                 />
                             )}
                         </Stack>
@@ -286,7 +374,7 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
                         variant="filled"
                         onClick={handleConfirmar}
                         loading={enviando}
-                        disabled={selectedTickets.length === 0}
+                        disabled={selectedTickets.length === 0 || totalPagos > maxMontoTotal}
                     >
                         Confirmar Liquidación
                     </Button>

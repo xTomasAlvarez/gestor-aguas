@@ -77,8 +77,16 @@ export const validarActualizarVenta = [
 export const validarRegistrarCobranza = [
     validarFechaNoFutura,
     body("clienteId").isMongoId().withMessage("Debe ser un MongoId válido"),
-    body("ticketId").isMongoId().withMessage("Debe ser un MongoId válido"),
+    // Soportar dos formas:
+    // 1. Legacy: ticketId (single) + montoAbonado
+    // 2. Multi-ticket: ticketIds (array) + pagos (array)
+    body("ticketId").optional().isMongoId().withMessage("Debe ser un MongoId válido"),
+    body("ticketIds").optional().isArray().withMessage("Debe ser un array de IDs"),
+    body("ticketIds.*").optional().isMongoId().withMessage("Cada ID debe ser MongoId válido"),
     body("montoAbonado").optional().isFloat({ min: 0 }).withMessage("Debe ser número mayor o igual a 0"),
+    body("pagos").optional().isArray().withMessage("Debe ser un array de pagos"),
+    body("pagos.*.ticketId").optional().isMongoId().withMessage("Ticket ID debe ser MongoId válido"),
+    body("pagos.*.monto").optional().isFloat({ min: 0 }).withMessage("Monto debe ser número >= 0"),
     body("metodoPago").optional().isIn(["efectivo", "transferencia"]).withMessage("Método de pago inválido"),
     body("envasesDevueltos").optional().isObject().withMessage("Debe ser un objeto"),
     body("envasesDevueltos.bidones_20L").optional().isInt({ min: 0 }).withMessage("Debe ser entero >= 0"),

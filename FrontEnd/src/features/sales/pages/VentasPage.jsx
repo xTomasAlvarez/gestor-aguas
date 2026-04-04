@@ -59,7 +59,6 @@ const VentasPage = () => {
     });
 
     const recargarTodo = async () => {
-        console.log("3. Repintando UI: recargando lista de clientes y ventas...");
         await Promise.all([recargarVentas(), recargarClientes()]);
     };
 
