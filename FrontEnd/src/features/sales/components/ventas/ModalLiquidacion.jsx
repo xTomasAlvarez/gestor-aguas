@@ -128,12 +128,10 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
             metodoPago
         };
 
-        console.log("1. Iniciando petición al backend desde Modal...", payload);
         setEnviando(true);
 
         try {
             const response = await registrarCobranza(payload);
-            console.log("2. Respuesta recibida:", response);
             toast.success("Liquidación múltiple registrada correctamente.");
             
             // Cerrar modal
@@ -141,11 +139,9 @@ const ModalLiquidacion = ({ opened, onClose, clienteId, tickets, onExito }) => {
             
             // Ejecutar callback de éxito
             if (onExito) {
-                console.log("-> Ejecutando callback onExito()");
                 onExito();
             }
         } catch (error) {
-            console.error("Error capturado en registrarCobranza:", error);
             const errorMsg = error.response?.data?.message || "Error crítico al procesar la cobranza.";
             toast.error(errorMsg);
             alert(`Fallo en el servidor: ${errorMsg}`);
