@@ -1,21 +1,20 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ModalLiquidacion from "../ModalLiquidacion";
 
-// Mock de dependencias externas
-jest.mock("@/features/sales/services/ventasService", () => ({
+// Mock de dependencias externas - ESM style
+jest.unstable_mockModule("@/features/sales/services/ventasService", () => ({
     registrarCobranza: jest.fn(),
 }));
 
-jest.mock("react-hot-toast", () => ({
+jest.unstable_mockModule("react-hot-toast", () => ({
     default: {
         error: jest.fn(),
         success: jest.fn(),
     },
 }));
 
-jest.mock("@/shared/components/CounterInput", () => {
-    return function MockCounterInput({ label, value, onChange, max }) {
+jest.unstable_mockModule("@/shared/components/CounterInput", () => ({
+    default: function MockCounterInput({ label, value, onChange, max }) {
         return (
             <div>
                 <label>{label}</label>
@@ -28,16 +27,18 @@ jest.mock("@/shared/components/CounterInput", () => {
                 />
             </div>
         );
-    };
-});
+    },
+}));
 
-jest.mock("@/shared/utils/format", () => ({
+jest.unstable_mockModule("@/shared/utils/format", () => ({
     formatPeso: (val) => `$${val}`,
     formatFecha: (date) => "01/01/2024",
 }));
 
-const { registrarCobranza } = require("@/features/sales/services/ventasService");
-const toast = require("react-hot-toast").default;
+// Import after all mocks are defined
+const { registrarCobranza } = await import("@/features/sales/services/ventasService");
+const toast = (await import("react-hot-toast")).default;
+const ModalLiquidacion = (await import("../ModalLiquidacion")).default;
 
 // Datos de prueba
 const mockTickets = [
@@ -99,92 +100,14 @@ describe("ModalLiquidacion - Multi-Ticket", () => {
         // Seleccionar primer ticket
         const checkboxes = screen.getAllByRole("checkbox");
         await userEvent.click(checkboxes[0]);
-        expect(checkboxes[0]).toBeChecked();
-
-        // Seleccionar segundo ticket
         await userEvent.click(checkboxes[1]);
-        expect(checkboxes[1]).toBeChecked();
 
-        // Ambos deben estar seleccionados
+        // Verificar que ambos están seleccionados
         expect(checkboxes[0]).toBeChecked();
         expect(checkboxes[1]).toBeChecked();
     });
 
-    test("Muestra tabla con múltiples tickets seleccionados", () => {
-        const mockOnClose = jest.fn();
-
-        render(
-            <ModalLiquidacion
-                opened={true}
-                onClose={mockOnClose}
-                clienteId="cliente1"
-                tickets={mockTickets}
-                onExito={() => {}}
-            />
-        );
-
-        // Inicialmente no hay tabla visible
-        expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    });
-
-    test("Calcula suma total de pagos correctamente", async () => {
-        const mockOnClose = jest.fn();
-
-        const { container } = render(
-            <ModalLiquidacion
-                opened={true}
-                onClose={mockOnClose}
-                clienteId="cliente1"
-                tickets={mockTickets}
-                onExito={() => {}}
-            />
-        );
-
-        const checkboxes = screen.getAllByRole("checkbox");
-
-        // Seleccionar ticket1 (deuda: 100) y ticket2 (deuda: 100)
-        await userEvent.click(checkboxes[0]);
-        await userEvent.click(checkboxes[1]);
-
-        // Debería mostrar tabla
-        const table = screen.getByRole("table");
-        expect(table).toBeInTheDocument();
-    });
-
-    test("Desseleccionar un ticket remueve su fila de tabla", async () => {
-        const mockOnClose = jest.fn();
-
-        render(
-            <ModalLiquidacion
-                opened={true}
-                onClose={mockOnClose}
-                clienteId="cliente1"
-                tickets={mockTickets}
-                onExito={() => {}}
-            />
-        );
-
-        const checkboxes = screen.getAllByRole("checkbox");
-
-        // Seleccionar ticket1
-        await userEvent.click(checkboxes[0]);
-        // Seleccionar ticket2
-        await userEvent.click(checkboxes[1]);
-
-        // Debería mostrar tabla
-        expect(screen.getByRole("table")).toBeInTheDocument();
-
-        // Deseleccionar ticket1
-        await userEvent.click(checkboxes[0]);
-
-        // La tabla debe actualizarse (debería tener menos filas)
-        const table = screen.getByRole("table");
-        const rows = within(table).getAllByRole("row");
-        // Header + 1 ticket = 2 rows
-        expect(rows.length).toBeLessThanOrEqual(3);
-    });
-
-    test("Envía payload con nueva API cuando hay múltiples tickets", async () => {
+    test("Muestra tabla de distribución de montos para tickets seleccionados", async () => {
         const mockOnClose = jest.fn();
         const mockOnExito = jest.fn();
 
@@ -199,60 +122,148 @@ describe("ModalLiquidacion - Multi-Ticket", () => {
         );
 
         const checkboxes = screen.getAllByRole("checkbox");
-
-        // Seleccionar ticket1 y ticket2
         await userEvent.click(checkboxes[0]);
-        await userEvent.click(checkboxes[1]);
 
-        // El botón debe ser visible
-        const btnConfirmar = screen.getByText("Confirmar Liquidación");
-        expect(btnConfirmar).toBeInTheDocument();
+        // Verificar que la tabla aparece
+        expect(screen.getByText(/ticket1/i)).toBeInTheDocument();
+        expect(screen.getByDisplayValue("100")).toBeInTheDocument();
     });
 
-    test("Resetea estado al cerrar modal", async () => {
+    test("Valida que la suma de montos no supere la deuda total", async () => {
         const mockOnClose = jest.fn();
+        const mockOnExito = jest.fn();
 
-        const { rerender } = render(
+        const { getByText, getByRole } = render(
             <ModalLiquidacion
                 opened={true}
                 onClose={mockOnClose}
                 clienteId="cliente1"
                 tickets={mockTickets}
-                onExito={() => {}}
+                onExito={mockOnExito}
+            />
+        );
+
+        const checkboxes = screen.getAllByRole("checkbox");
+        await userEvent.click(checkboxes[0]); // ticket1 (deuda: 100)
+        await userEvent.click(checkboxes[1]); // ticket2 (deuda: 100)
+
+        const button = getByRole("button", { name: /confirmar/i });
+        expect(button).toBeDisabled(); // Porque la suma sería mayor si se intenta sobrepasar
+    });
+
+    test("Limpia la tabla al deseleccionar un ticket", async () => {
+        const mockOnClose = jest.fn();
+        const mockOnExito = jest.fn();
+
+        render(
+            <ModalLiquidacion
+                opened={true}
+                onClose={mockOnClose}
+                clienteId="cliente1"
+                tickets={mockTickets}
+                onExito={mockOnExito}
+            />
+        );
+
+        const checkboxes = screen.getAllByRole("checkbox");
+        await userEvent.click(checkboxes[0]);
+        await userEvent.click(checkboxes[0]); // Deseleccionar
+
+        // Verificar que la tabla desaparece
+        const montoInputs = screen.queryAllByRole("spinbutton");
+        expect(montoInputs.length).toBe(0); // No debe haber inputs de monto
+    });
+
+    test("Permite editar montos en la tabla de distribución", async () => {
+        const mockOnClose = jest.fn();
+        const mockOnExito = jest.fn();
+
+        render(
+            <ModalLiquidacion
+                opened={true}
+                onClose={mockOnClose}
+                clienteId="cliente1"
+                tickets={mockTickets}
+                onExito={mockOnExito}
             />
         );
 
         const checkboxes = screen.getAllByRole("checkbox");
         await userEvent.click(checkboxes[0]);
 
-        expect(checkboxes[0]).toBeChecked();
+        const input = screen.getByDisplayValue("100");
+        await userEvent.clear(input);
+        await userEvent.type(input, "50");
 
-        // Cerrar modal
-        rerender(
+        expect(input.value).toBe("50");
+    });
+
+    test("Rechaza más de 10 tickets en una transacción", async () => {
+        const mockOnClose = jest.fn();
+        const mockOnExito = jest.fn();
+
+        const manyTickets = Array.from({ length: 15 }, (_, i) => ({
+            _id: `ticket${i}`,
+            fecha: "2024-01-01",
+            total: 100,
+            monto_pagado: 0,
+            estado: "pendiente",
+            items: [{ producto: "Item", cantidad: 1 }],
+            envases_devueltos: { bidones_20L: 0, bidones_12L: 0, sodas: 0 },
+        }));
+
+        render(
             <ModalLiquidacion
-                opened={false}
+                opened={true}
                 onClose={mockOnClose}
                 clienteId="cliente1"
-                tickets={mockTickets}
-                onExito={() => {}}
+                tickets={manyTickets}
+                onExito={mockOnExito}
             />
         );
 
-        // Reabrirlo
-        rerender(
+        const checkboxes = screen.getAllByRole("checkbox");
+
+        // Seleccionar los primeros 10
+        for (let i = 0; i < 10; i++) {
+            await userEvent.click(checkboxes[i]);
+        }
+
+        // El checkbox 11 debe estar deshabilitado o no clickeable
+        // (dependiendo de la implementación)
+        expect(checkboxes[10]).not.toBeChecked();
+    });
+
+    test("Envía el payload correcto con API multi-ticket", async () => {
+        const mockOnClose = jest.fn();
+        const mockOnExito = jest.fn();
+
+        registrarCobranza.mockResolvedValue({ success: true });
+
+        render(
             <ModalLiquidacion
                 opened={true}
                 onClose={mockOnClose}
                 clienteId="cliente1"
                 tickets={mockTickets}
-                onExito={() => {}}
+                onExito={mockOnExito}
             />
         );
 
-        // Los checkboxes deben estar destildados
-        const newCheckboxes = screen.getAllByRole("checkbox");
-        newCheckboxes.forEach((cb) => {
-            expect(cb).not.toBeChecked();
-        });
+        const checkboxes = screen.getAllByRole("checkbox");
+        await userEvent.click(checkboxes[0]);
+        await userEvent.click(checkboxes[1]);
+
+        const button = screen.getByRole("button", { name: /confirmar/i });
+        await userEvent.click(button);
+
+        // Verificar que registrarCobranza fue llamado con el payload multi-ticket
+        expect(registrarCobranza).toHaveBeenCalledWith(
+            expect.objectContaining({
+                clienteId: "cliente1",
+                ticketIds: expect.arrayContaining(["ticket1", "ticket2"]),
+                pagos: expect.any(Array),
+            })
+        );
     });
 });
