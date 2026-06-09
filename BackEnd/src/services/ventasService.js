@@ -221,18 +221,16 @@ export const registrarCobranza = async (body, businessId) => {
             throw new Error("Uno o más tickets ya se encuentran totalmente saldados.");
         }
 
-        // Paso 3: Construir mapa de pagos (new API)
-        // Para backward compatibility: si viene montoAbonado (legacy), usar ese monto para el primer ticket
         let pagoMap = new Map();
         
         if (pagos.length > 0) {
-            // Nueva API: usar array de pagos
+            // Nueva API: usar array de pagos explícitos
             pagos.forEach(p => {
                 pagoMap.set(String(p.ticketId), p.monto || 0);
             });
-        } else if (montoAbonado > 0) {
-            // Legacy API: usar montoAbonado para el primer ticket
-            pagoMap.set(String(ventas[0]._id), montoAbonado);
+        } else if (montoAbonado > 0 && ticketId) {
+            // Legacy API: usar montoAbonado estrictamente para el ticketId único enviado
+            pagoMap.set(String(ticketId), montoAbonado);
         }
 
         // Paso 4: Validar totales
@@ -304,16 +302,15 @@ export const registrarCobranza = async (body, businessId) => {
             envasesRestantes.bidones_12L -= aDeducir.bidones_12L;
             envasesRestantes.sodas -= aDeducir.sodas;
 
-            // Determinar estado
+            // Determinar estado estrictamente por pago monetario
             const pagoCompleto = (venta.monto_pagado === venta.total);
-            const envases20Completos = (venta.envases_devueltos.bidones_20L === prestados.bidones_20L);
-            const envases12Completos = (venta.envases_devueltos.bidones_12L === prestados.bidones_12L);
-            const sodasCompletas = (venta.envases_devueltos.sodas === prestados.sodas);
 
-            if (pagoCompleto && envases20Completos && envases12Completos && sodasCompletas) {
+            if (pagoCompleto) {
                 venta.estado = "saldado";
-            } else {
+            } else if (venta.monto_pagado > 0) {
                 venta.estado = "pago_parcial";
+            } else {
+                venta.estado = "pendiente";
             }
 
             const saveOpts = session ? { session } : {};
