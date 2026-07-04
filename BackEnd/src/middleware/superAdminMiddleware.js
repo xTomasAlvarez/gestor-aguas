@@ -4,7 +4,7 @@
  */
 export const soloSuperAdmin = (req, res, next) => {
     if (req.usuario?.rol !== "superadmin") {
-        return res.status(403).json({ message: "Acceso denegado. Se requiere nivel de Super Administrador." });
+        return res.status(403).json({ message: "Acceso denegado. Se requieren privilegios de SuperAdmin" });
     }
     next();
 };
