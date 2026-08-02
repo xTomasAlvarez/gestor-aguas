@@ -12,3 +12,16 @@ export const getDashboardStats = async (req, res) => {
         res.status(error.status || 500).json({ message: error.message });
     }
 };
+
+// GET /api/stats/annual?anio=YYYY
+export const getAnnualStats = async (req, res) => {
+    try {
+        const resultado = await StatsService.getAnnualStats(
+            req.usuario.businessId,
+            req.query.anio
+        );
+        res.json(resultado);
+    } catch (error) {
+        res.status(error.status || 500).json({ message: error.message });
+    }
+};

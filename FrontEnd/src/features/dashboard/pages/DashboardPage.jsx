@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { getDashboardStats } from "@/features/dashboard/services/statsService";
+import { getDashboardStats, getAnnualStats } from "@/features/dashboard/services/statsService";
 import { obtenerDashboardInventario } from "@/features/inventory/services/inventarioService";
 import { formatPeso } from "@/shared/utils/format";
-import { DollarSign, Truck, Package, Activity, AlertCircle } from "lucide-react";
+import { DollarSign, Truck, Package, Activity, AlertCircle, Calendar, TrendingUp, ShoppingBag } from "lucide-react";
 
 // ── Paleta corporativa (Aqua-Industrial) ──
 const C = {
@@ -74,6 +74,152 @@ const ChartContainer = ({ title, children, extra }) => (
     </div>
 );
 
+// ── Vista anual (tabla mensual + selector de año) ──
+const VistaAnual = ({ anual, anioSel, onAnioChange, cargando }) => {
+    if (cargando && !anual) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-pulse">
+                {[1, 2, 3].map(i => <div key={i} className="bg-slate-200 h-28 rounded-2xl" />)}
+            </div>
+        );
+    }
+    if (!anual) return null;
+
+    const productos    = anual.productos    || [];
+    const meses        = anual.meses        || [];
+    const totales      = anual.totales      || { ingresos: 0, egresos: 0, neto: 0, cantidadVentas: 0, productos: {} };
+    const aniosDisp    = anual.aniosDisponibles || [anioSel];
+    const unidadesAnio = Object.values(totales.productos || {}).reduce((a, b) => a + b, 0);
+    const netoAnual    = totales.neto ?? ((totales.ingresos || 0) - (totales.egresos || 0));
+    const netoAnualNeg = netoAnual < 0;
+
+    return (
+        <>
+            {/* Selector de año + KPIs anuales */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resumen anual</p>
+                        <p className="text-lg font-extrabold text-slate-800 tracking-tight">Año {anual.anio}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label htmlFor="selector-anio" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Año</label>
+                    <select
+                        id="selector-anio"
+                        value={anioSel}
+                        onChange={(e) => onAnioChange(Number(e.target.value))}
+                        className="px-3 py-2 text-sm font-bold rounded-lg bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    >
+                        {aniosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <KPICard
+                    title={`Total Neto ${anual.anio}`}
+                    value={formatPeso(netoAnual)}
+                    sub={`Ingresos ${formatPeso(totales.ingresos || 0)} − Egresos ${formatPeso(totales.egresos || 0)}`}
+                    icon={TrendingUp}
+                    colorClass={netoAnualNeg ? "text-red-600" : "text-emerald-600"}
+                    bgIconClass={netoAnualNeg ? "bg-red-100"   : "bg-emerald-100"} />
+                <KPICard
+                    title="Ventas realizadas"
+                    value={`${totales.cantidadVentas}`}
+                    sub="Cantidad de operaciones"
+                    icon={DollarSign} colorClass="text-blue-600" bgIconClass="bg-blue-100" />
+                <KPICard
+                    title="Unidades vendidas"
+                    value={`${unidadesAnio}`}
+                    sub="Total de productos entregados"
+                    icon={ShoppingBag} colorClass="text-orange-500" bgIconClass="bg-orange-100" />
+            </div>
+
+            {/* Tabla mensual */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Desglose mensual</h3>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {productos.length} {productos.length === 1 ? "producto" : "productos"}
+                    </span>
+                </div>
+                <div className="overflow-x-auto -mx-5 px-5">
+                    <table className="w-full text-sm border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-slate-200">
+                                <th className="text-left py-3 pr-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Mes</th>
+                                {productos.map(p => (
+                                    <th key={p.key} className="text-right py-3 px-3 text-[11px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                                        {p.label}
+                                    </th>
+                                ))}
+                                <th className="text-right py-3 pl-3 text-[11px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                                    Ventas
+                                </th>
+                                <th className="text-right py-3 pl-3 text-[11px] font-black text-emerald-600 uppercase tracking-wider whitespace-nowrap">
+                                    Total Neto
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {meses.map(m => {
+                                const vacio = m.cantidadVentas === 0 && (m.egresos || 0) === 0;
+                                const neto  = m.neto ?? ((m.ingresos || 0) - (m.egresos || 0));
+                                const netoColor = vacio
+                                    ? "text-slate-400"
+                                    : neto < 0
+                                        ? "text-red-600"
+                                        : "text-emerald-600";
+                                return (
+                                    <tr key={m.mes} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${vacio ? "text-slate-400" : "text-slate-700"}`}>
+                                        <td className="py-2.5 pr-4 font-bold">{m.nombre}</td>
+                                        {productos.map(p => (
+                                            <td key={p.key} className="py-2.5 px-3 text-right font-semibold tabular-nums">
+                                                {m.productos?.[p.key] || 0}
+                                            </td>
+                                        ))}
+                                        <td className="py-2.5 pl-3 text-right font-semibold tabular-nums">
+                                            {m.cantidadVentas}
+                                        </td>
+                                        <td className={`py-2.5 pl-3 text-right font-black tabular-nums ${netoColor}`}>
+                                            {formatPeso(neto)}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr className="border-t-2 border-slate-300 bg-slate-50">
+                                <td className="py-3 pr-4 text-xs font-black text-slate-800 uppercase tracking-wider">Total</td>
+                                {productos.map(p => (
+                                    <td key={p.key} className="py-3 px-3 text-right text-sm font-black text-slate-800 tabular-nums">
+                                        {totales.productos?.[p.key] || 0}
+                                    </td>
+                                ))}
+                                <td className="py-3 pl-3 text-right text-sm font-black text-slate-800 tabular-nums">
+                                    {totales.cantidadVentas}
+                                </td>
+                                <td className={`py-3 pl-3 text-right text-sm font-black tabular-nums ${netoAnualNeg ? "text-red-700" : "text-emerald-700"}`}>
+                                    {formatPeso(netoAnual)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {totales.cantidadVentas === 0 && (
+                    <div className="mt-4 text-center text-sm font-medium text-slate-400 py-6 bg-slate-50 rounded-xl border border-slate-100">
+                        Sin ventas registradas en {anual.anio}.
+                    </div>
+                )}
+            </div>
+        </>
+    );
+};
+
 // ── Página Principal ──
 const DashboardPage = () => {
     const [tiempo, setTiempo] = useState("mes");
@@ -82,8 +228,30 @@ const DashboardPage = () => {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
 
+    // Estado específico para la vista anual
+    const [anioSel, setAnioSel] = useState(new Date().getFullYear());
+    const [anual, setAnual] = useState(null);
+
     useEffect(() => {
         let isSubscribed = true;
+
+        if (tiempo === "año") {
+            setCargando(true);
+            getAnnualStats(anioSel)
+                .then(res => {
+                    if (!isSubscribed) return;
+                    setAnual(res.data);
+                    setCargando(false);
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (isSubscribed) {
+                        setError("No se pudieron cargar las métricas anuales.");
+                        setCargando(false);
+                    }
+                });
+            return () => { isSubscribed = false; };
+        }
 
         Promise.all([
             getDashboardStats(tiempo),
@@ -103,11 +271,17 @@ const DashboardPage = () => {
         });
 
         return () => { isSubscribed = false; };
-    }, [tiempo]);
+    }, [tiempo, anioSel]);
 
     if (error) return <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-red-600 font-medium text-center">{error}</div>;
 
     const navBtnCls = (t) => `px-4 py-2 text-sm font-bold rounded-lg transition-colors ${tiempo === t ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`;
+
+    const cambiarTiempo = (t) => {
+        setCargando(true);
+        setError(null);
+        setTiempo(t);
+    };
 
     // Desestructurar Stats
     const { resumenPeriodo, tendencia30Dias, listaRecupero, productosMasVendidos, distribucionPagos } = stats || {};
@@ -145,14 +319,21 @@ const DashboardPage = () => {
                         <p className="text-sm font-medium text-slate-500 mt-1">Supervisa finanzas y activos físicos en tiempo real.</p>
                     </div>
                     <div className="flex bg-slate-100 p-1 rounded-xl w-max border border-slate-200/60">
-                        <button onClick={() => { setCargando(true); setError(null); setTiempo("hoy"); }}    className={navBtnCls("hoy")}>Hoy</button>
-                        <button onClick={() => { setCargando(true); setError(null); setTiempo("semana"); }} className={navBtnCls("semana")}>Semana</button>
-                        <button onClick={() => { setCargando(true); setError(null); setTiempo("mes"); }}    className={navBtnCls("mes")}>Mes</button>
+                        <button onClick={() => cambiarTiempo("hoy")}    className={navBtnCls("hoy")}>Hoy</button>
+                        <button onClick={() => cambiarTiempo("semana")} className={navBtnCls("semana")}>Semana</button>
+                        <button onClick={() => cambiarTiempo("mes")}    className={navBtnCls("mes")}>Mes</button>
+                        <button onClick={() => cambiarTiempo("año")}    className={navBtnCls("año")}>Año</button>
                     </div>
                 </div>
 
-                {/* Skeletons */}
-                {cargando && !stats ? (
+                {tiempo === "año" ? (
+                    <VistaAnual
+                        anual={anual}
+                        anioSel={anioSel}
+                        onAnioChange={(a) => { setCargando(true); setError(null); setAnioSel(a); }}
+                        cargando={cargando}
+                    />
+                ) : cargando && !stats ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
                         {[1, 2, 3, 4].map(i => <div key={i} className="bg-slate-200 h-28 rounded-2xl"></div>)}
                     </div>

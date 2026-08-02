@@ -1,6 +1,7 @@
 import Venta   from "../models/Venta.js";
 import Gasto   from "../models/Gastos.js";
 import Cliente from "../models/Cliente.js";
+import Empresa from "../models/Empresa.js";
 
 // ── Helpers privados (NO exportar) ─────────────────────────────────────────
 
@@ -169,5 +170,141 @@ export const getDashboardStats = async (businessId, tiempo = "mes") => {
         distribucionPagos,
         tendencia30Dias,
         listaRecupero
+    };
+};
+
+// ── Resumen anual: desglose mensual por producto + ingresos ────────────────
+export const getAnnualStats = async (businessId, anioParam) => {
+    const anioActual = new Date().getFullYear();
+    const anio = Number.isInteger(Number(anioParam)) ? Number(anioParam) : anioActual;
+
+    // Rango del año seleccionado (usa la zona horaria del server, misma
+    // convención que getDashboardStats para el corte diario/mensual).
+    const inicioAnio = new Date(anio,     0, 1, 0, 0, 0, 0);
+    const finAnio    = new Date(anio + 1, 0, 1, 0, 0, 0, 0);
+
+    // 1. Catálogo dinámico de productos de la empresa
+    const empresa = await Empresa.findById(businessId).select("productos").lean();
+    const productosCatalogo = (empresa?.productos || []).map(p => ({
+        key:   p.key,
+        label: p.label,
+    }));
+
+    // 2. Cantidades vendidas por mes y por producto
+    const cantidadesRaw = await Venta.aggregate([
+        { $match: { businessId, fecha: { $gte: inicioAnio, $lt: finAnio } } },
+        { $unwind: "$items" },
+        { $group: {
+            _id: { mes: { $month: "$fecha" }, producto: "$items.producto" },
+            cantidad: { $sum: "$items.cantidad" },
+        }},
+    ]);
+
+    // 3. Ingresos totales + cantidad de ventas por mes
+    const ingresosRaw = await Venta.aggregate([
+        { $match: { businessId, fecha: { $gte: inicioAnio, $lt: finAnio } } },
+        { $group: {
+            _id: { mes: { $month: "$fecha" } },
+            ingresos: { $sum: "$total" },
+            cantidadVentas: { $sum: 1 },
+        }},
+    ]);
+
+    // 3.b Egresos (Gastos) totales por mes
+    const egresosRaw = await Gasto.aggregate([
+        { $match: { businessId, fecha: { $gte: inicioAnio, $lt: finAnio } } },
+        { $group: {
+            _id: { mes: { $month: "$fecha" } },
+            egresos: { $sum: "$monto" },
+        }},
+    ]);
+
+    // 4. Año de la primera venta (para armar el selector de años disponibles)
+    const [primera] = await Venta.aggregate([
+        { $match: { businessId } },
+        { $group: { _id: null, primeraFecha: { $min: "$fecha" } } },
+    ]);
+    const anioInicial = primera?.primeraFecha
+        ? new Date(primera.primeraFecha).getFullYear()
+        : anioActual;
+    const aniosDisponibles = [];
+    for (let a = anioActual; a >= Math.min(anioInicial, anioActual); a--) {
+        aniosDisponibles.push(a);
+    }
+
+    // 5. Armar la matriz de meses: 12 filas siempre, con 0 en meses sin ventas
+    const productoKeys = productosCatalogo.map(p => p.key);
+
+    // Mapa mes -> {producto -> cantidad}
+    const cantMap = {};
+    for (const row of cantidadesRaw) {
+        const { mes, producto } = row._id;
+        if (!cantMap[mes]) cantMap[mes] = {};
+        cantMap[mes][producto] = (cantMap[mes][producto] || 0) + row.cantidad;
+    }
+    const ingMap = Object.fromEntries(
+        ingresosRaw.map(r => [r._id.mes, { ingresos: r.ingresos, cantidadVentas: r.cantidadVentas }])
+    );
+    const egrMap = Object.fromEntries(
+        egresosRaw.map(r => [r._id.mes, r.egresos])
+    );
+
+    const meses = Array.from({ length: 12 }, (_, i) => {
+        const mesNum = i + 1;
+        const productos = Object.fromEntries(productoKeys.map(k => [k, 0]));
+        // Cargar cantidades por producto del catálogo
+        for (const k of productoKeys) {
+            productos[k] = cantMap[mesNum]?.[k] || 0;
+        }
+        // Sumar también productos que aparecen en ventas pero no están en el catálogo
+        // (por ejemplo, productos históricos ya eliminados del catálogo).
+        for (const [prodKey, cant] of Object.entries(cantMap[mesNum] || {})) {
+            if (!(prodKey in productos)) productos[prodKey] = cant;
+        }
+        const ingresos = ingMap[mesNum]?.ingresos || 0;
+        const egresos  = egrMap[mesNum]           || 0;
+        return {
+            mes: mesNum,
+            nombre: MESES[i],
+            productos,
+            ingresos,
+            egresos,
+            neto:           ingresos - egresos,
+            cantidadVentas: ingMap[mesNum]?.cantidadVentas || 0,
+        };
+    });
+
+    // 6. Totales del año (agregados a partir de la matriz mensual)
+    const totalesProductos = {};
+    for (const m of meses) {
+        for (const [k, v] of Object.entries(m.productos)) {
+            totalesProductos[k] = (totalesProductos[k] || 0) + v;
+        }
+    }
+    const totalIngresos = meses.reduce((acc, m) => acc + m.ingresos, 0);
+    const totalEgresos  = meses.reduce((acc, m) => acc + m.egresos,  0);
+    const totales = {
+        ingresos:       totalIngresos,
+        egresos:        totalEgresos,
+        neto:           totalIngresos - totalEgresos,
+        cantidadVentas: meses.reduce((acc, m) => acc + m.cantidadVentas, 0),
+        productos:      totalesProductos,
+    };
+
+    // 7. Incluir en el catálogo los productos históricos que ya no están, para
+    // que el frontend pueda renderizar todas las columnas correctamente.
+    const catalogoFinal = [...productosCatalogo];
+    for (const k of Object.keys(totalesProductos)) {
+        if (!catalogoFinal.some(p => p.key === k)) {
+            catalogoFinal.push({ key: k, label: k });
+        }
+    }
+
+    return {
+        anio,
+        aniosDisponibles,
+        productos: catalogoFinal,
+        meses,
+        totales,
     };
 };
